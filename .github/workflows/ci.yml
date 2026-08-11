@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    name: Tests Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install production dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install test tools
+        run: pip install pytest pytest-cov
+
+      - name: Install package (editable)
+        # Rend l'entry point `tickerlab` disponible — test_cli_version_subprocess
+        # passe au lieu d'être skippé.
+        run: pip install -e .
+
+      - name: Run test suite with coverage
+        run: |
+          pytest \
+            --cov=core \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-report=json \
+            -q
+
+      - name: Upload coverage XML (optionnel — Codecov compatible)
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+      - name: Coverage gate — modules critiques
+        # Étape séparée : fait échouer le build si un module critique régresse.
+        # Seuils planchers fixés ~5 pts sous la couverture mesurée au 2026-06-17.
+        # Voir scripts/check_coverage_gate.py et CHANGELOG Phase 9 pour détails.
+        run: python scripts/check_coverage_gate.py

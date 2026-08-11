@@ -1,0 +1,17 @@
+# Normalisation des fins de ligne : LF dans le dépôt, quel que soit l'OS
+* text=auto eol=lf
+*.py   text eol=lf
+*.tex  text eol=lf
+*.md   text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.txt  text eol=lf
+*.rst  text eol=lf
+
+# Binaires — jamais de conversion EOL
+*.pkl    binary
+*.png    binary
+*.pdf    binary
+*.jpg    binary
+*.xlsx   binary

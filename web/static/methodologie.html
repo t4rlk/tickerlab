@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TickerLab — Méthodologie des Analyses</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    :root {
+      --bg:#FFFFFF; --surface:#F7F7F7; --border:#E0E0E0;
+      --text:#0A0A0A; --text2:#3A3A3A; --muted:#888888;
+      --black:#000000; --nav-h:60px;
+    }
+    body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; }
+    ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:#ccc}
+
+    /* NAV */
+    nav {
+      position:fixed; top:0; left:0; right:0; z-index:100;
+      height:var(--nav-h); background:var(--bg); border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between; padding:0 48px;
+    }
+    .nav-logo{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--text);text-decoration:none}
+    .nav-links{display:flex;gap:40px;align-items:center}
+    .nav-links a{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .2s}
+    .nav-links a:hover,.nav-links a.active{color:var(--text)}
+    .btn-print{
+      font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+      padding:8px 20px;border:1px solid var(--border);background:none;cursor:pointer;
+      color:var(--text2);transition:border-color .2s;
+    }
+    .btn-print:hover{border-color:var(--black);color:var(--black)}
+
+    /* ── PRINT STYLES ── */
+    @media print {
+      nav,.no-print { display:none !important; }
+      body { font-size:10pt; color:#000; background:#fff; }
+      .page-wrap { max-width:100%; padding:0; }
+      .doc-header { border:none; padding-bottom:0; }
+      h1 { font-size:22pt; }
+      .method-section { page-break-inside:avoid; }
+      .toc { page-break-after:always; }
+      a { color:#000; text-decoration:none; }
+    }
+
+    /* LAYOUT */
+    .page-wrap { max-width:900px; margin:0 auto; padding:calc(var(--nav-h)+48px) 48px 80px; }
+
+    /* DOC HEADER */
+    .doc-header {
+      border-bottom:2px solid var(--black); padding-bottom:24px; margin-bottom:48px;
+      display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;
+    }
+    .doc-meta { font-size:.72rem; font-family:'DM Mono',monospace; color:var(--muted); }
+    .doc-meta div { margin-bottom:4px; }
+    h1{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:900;line-height:1.1;margin-bottom:8px}
+    .doc-subtitle{font-size:1rem;color:var(--text2);margin-bottom:12px;font-style:italic}
+
+    /* TOC */
+    .toc{border:1px solid var(--border);padding:24px 28px;margin-bottom:48px;background:var(--surface)}
+    .toc-title{font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+    .toc ol{list-style:none;counter-reset:toc;padding:0}
+    .toc li{counter-increment:toc;display:flex;align-items:baseline;gap:0;margin-bottom:8px;font-size:.85rem}
+    .toc li::before{content:counter(toc)'.';font-family:'DM Mono',monospace;color:var(--muted);min-width:24px;flex-shrink:0}
+    .toc a{color:var(--text2);text-decoration:none;flex:1;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+    .toc a:hover{color:var(--black)}
+    .toc a::after{content:'';flex:1;border-bottom:1px dotted var(--border);margin:0 8px;position:relative;top:-2px}
+    .toc-pg{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--muted)}
+
+    /* SECTION */
+    .method-section{margin-bottom:56px}
+    .sec-header{display:flex;align-items:baseline;gap:16px;margin-bottom:24px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+    .sec-num{font-family:'DM Mono',monospace;font-size:.8rem;color:var(--muted);flex-shrink:0}
+    h2{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700}
+    h2 em{font-style:italic}
+    h3{font-size:.95rem;font-weight:600;margin-bottom:10px;margin-top:24px}
+    p{font-size:.9rem;line-height:1.8;color:var(--text2);margin-bottom:16px}
+    p:last-child{margin-bottom:0}
+    ul,ol{padding-left:0;list-style:none;margin-bottom:16px}
+    li{font-size:.88rem;line-height:1.7;color:var(--text2);padding:4px 0;display:flex;align-items:flex-start;gap:10px}
+    li::before{content:'—';color:var(--muted);flex-shrink:0}
+
+    /* Formula blocks */
+    .formula-block{
+      background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--black);
+      padding:16px 20px;margin:16px 0;font-family:'DM Mono',monospace;font-size:.82rem;
+      line-height:1.7;color:var(--text);overflow-x:auto;
+    }
+    .formula-label{font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:block}
+
+    /* Inline code */
+    code{font-family:'DM Mono',monospace;font-size:.82rem;background:var(--surface);padding:1px 5px;border:1px solid var(--border)}
+
+    /* Table */
+    .data-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.83rem}
+    .data-table th{text-align:left;padding:10px 14px;border-bottom:2px solid var(--black);font-weight:600;font-size:.72rem;letter-spacing:.08em}
+    .data-table td{padding:9px 14px;border-bottom:1px solid var(--border);color:var(--text2)}
+    .data-table tr:last-child td{border-bottom:none}
+    .data-table tr:hover td{background:var(--surface)}
+    .t-mono{font-family:'DM Mono',monospace}
+
+    /* Callout */
+    .callout{border:1px solid var(--border);padding:16px 20px;margin:16px 0;display:flex;gap:14px;align-items:flex-start}
+    .callout-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+    .callout-body{font-size:.84rem;line-height:1.7;color:var(--text2)}
+    .callout-body strong{color:var(--text)}
+
+    /* Step indicator */
+    .pipeline-steps{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);margin:16px 0}
+    .pipeline-step{display:flex;align-items:flex-start;gap:20px;padding:18px 20px;border-bottom:1px solid var(--border)}
+    .pipeline-step:last-child{border-bottom:none}
+    .ps-num{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--muted);flex-shrink:0;min-width:24px;padding-top:2px}
+    .ps-title{font-size:.9rem;font-weight:600;margin-bottom:4px}
+    .ps-desc{font-size:.8rem;color:var(--muted);line-height:1.6}
+
+    /* Ref list */
+    .ref-list{border-top:1px solid var(--border);padding-top:24px;margin-top:32px}
+    .ref-item{font-size:.8rem;color:var(--muted);line-height:1.6;margin-bottom:8px;padding-left:20px;text-indent:-20px}
+    .ref-item em{color:var(--text2)}
+
+    /* Print CTA */
+    .print-cta{
+      border:1px solid var(--border);padding:24px 28px;margin-bottom:48px;
+      display:flex;justify-content:space-between;align-items:center;gap:20px;
+      background:var(--surface);
+    }
+    .print-cta p{font-size:.83rem;color:var(--muted);line-height:1.6;max-width:480px}
+    .btn{font-size:.75rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:11px 22px;text-decoration:none;display:inline-block;border:none;cursor:pointer}
+    .btn-black{background:var(--black);color:#fff;transition:opacity .2s}.btn-black:hover{opacity:.8}
+
+    @media(max-width:900px){
+      nav{padding:0 20px} .nav-links{display:none}
+      .page-wrap{padding-left:16px;padding-right:16px}
+      .doc-header{flex-direction:column;align-items:flex-start}
+      .print-cta{flex-direction:column;align-items:flex-start}
+    }
+  </style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="landing.html">TickerLab</a>
+  <div class="nav-links">
+    <a href="analyse.html">Analyse</a>
+    <a href="landing.html#modules">Modules</a>
+    <a href="methodologie.html" class="active">Méthodologie</a>
+    <a href="contact.html">Contact</a>
+  </div>
+  <button class="btn-print no-print" onclick="window.print()">⬇ Télécharger PDF</button>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- ── PRINT CTA ────────────────────────────────────────────────────────── -->
+  <div class="print-cta no-print" id="print">
+    <p>Ce document décrit l'intégralité du processus analytique de TickerLab. Utilisez-le comme référence pour interpréter les résultats ou le citer dans un travail académique.</p>
+    <button class="btn btn-black" onclick="window.print()">Exporter en PDF</button>
+  </div>
+
+  <!-- ── DOC HEADER ──────────────────────────────────────────────────────── -->
+  <div class="doc-header">
+    <div>
+      <h1>Méthodologie des Analyses<br>TickerLab</h1>
+      <div class="doc-subtitle">Pipeline ARIMA–GARCH–VAR · Risk Management · Rapport de Publication</div>
+    </div>
+    <div class="doc-meta">
+      <div>Version &nbsp;6.3</div>
+      <div>Juin 2026</div>
+      <div>tickerlab · feat/mv-socle-var</div>
+    </div>
+  </div>
+
+  <!-- ── TOC ──────────────────────────────────────────────────────────────── -->
+  <div class="toc">
+    <div class="toc-title">Table des matières</div>
+    <ol>
+      <li><a href="#sec1">Vue d'ensemble du pipeline<span class="toc-pg">2</span></a></li>
+      <li><a href="#sec2">Collecte et préparation des données<span class="toc-pg">2</span></a></li>
+      <li><a href="#sec3">Analyse de stationnarité<span class="toc-pg">3</span></a></li>
+      <li><a href="#sec4">Modélisation ARIMA<span class="toc-pg">3</span></a></li>
+      <li><a href="#sec5">Modélisation GARCH et variance conditionnelle<span class="toc-pg">4</span></a></li>
+      <li><a href="#sec6">Value-at-Risk et backtests<span class="toc-pg">5</span></a></li>
+      <li><a href="#sec7">Ruptures structurelles (ICSS)<span class="toc-pg">6</span></a></li>
+      <li><a href="#sec8">VAR Multivarié<span class="toc-pg">6</span></a></li>
+      <li><a href="#sec9">Rapport PDF et prose IA<span class="toc-pg">7</span></a></li>
+      <li><a href="#sec10">Références bibliographiques<span class="toc-pg">8</span></a></li>
+    </ol>
+  </div>
+
+  <!-- ── 1. VUE D'ENSEMBLE ─────────────────────────────────────────────── -->
+  <div class="method-section" id="sec1">
+    <div class="sec-header">
+      <span class="sec-num">01</span>
+      <h2>Vue d'ensemble du <em>pipeline</em></h2>
+    </div>
+    <p>
+      TickerLab est un pipeline d'économétrie financière automatisé, conçu pour produire des analyses
+      reproductibles de niveau publication à partir d'un simple ticker Yahoo Finance.
+      Le pipeline enchaîne les étapes suivantes de manière séquentielle et déterministe :
+    </p>
+    <div class="pipeline-steps">
+      <div class="pipeline-step">
+        <span class="ps-num">1</span>
+        <div><div class="ps-title">Téléchargement</div><div class="ps-desc">Prix via yfinance, conversion en log-rendements (pas en pourcentage).</div></div>
+      </div>
+      <div class="pipeline-step">
+        <span class="ps-num">2</span>
+        <div><div class="ps-title">Stationnarité</div><div class="ps-desc">ADF, PP, KPSS, différenciation si nécessaire.</div></div>
+      </div>
+      <div class="pipeline-step">
+        <span class="ps-num">3</span>
+        <div><div class="ps-title">ARIMA</div><div class="ps-desc">Sélection d'ordre par AIC/BIC, estimation QML, tests de blancheur, prévisions bootstrap.</div></div>
+      </div>
+      <div class="pipeline-step">
+        <span class="ps-num">4</span>
+        <div><div class="ps-title">GARCH grid search</div><div class="ps-desc">5 spécifications × 4 distributions → score composite AIC + tests OOS.</div></div>
+      </div>
+      <div class="pipeline-step">
+        <span class="ps-num">5</span>
+        <div><div class="ps-title">VaR & backtests</div><div class="ps-desc">6 méthodes de VaR. Kupiec, Christoffersen, critères FRTB Bâle.</div></div>
+      </div>
+      <div class="pipeline-step">
+        <span class="ps-num">6</span>
+        <div><div class="ps-title">VAR multivarié (optionnel)</div><div class="ps-desc">Granger, IRF Cholesky, décomposition FEVD sur ≥ 2 actifs.</div></div>
+      </div>
+      <div class="pipeline-step">
+        <span class="ps-num">7</span>
+        <div><div class="ps-title">Rapport</div><div class="ps-desc">LaTeX compilé, figures haute résolution, prose rédigée par Claude Opus.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2. DONNÉES ────────────────────────────────────────────────────── -->
+  <div class="method-section" id="sec2">
+    <div class="sec-header">
+      <span class="sec-num">02</span>
+      <h2>Collecte et préparation <em>des données</em></h2>
+    </div>
+    <p>
+      Les données de prix sont téléchargées depuis Yahoo Finance via la bibliothèque <code>yfinance</code>.
+      Le pipeline supporte trois fréquences : journalière (<code>daily</code>), hebdomadaire (<code>weekly</code>)
+      et mensuelle (<code>monthly</code>). La variable analysée est le log-rendement défini par :
+    </p>
+    <div class="formula-block">
+      <span class="formula-label">Log-rendement (échelle naturelle)</span>
+      r_t = ln(P_t / P_{t-1})
+    </div>
+    <p>
+      Les rendements sont calculés en <strong>échelle naturelle</strong> (pas multipliés par 100).
+      Pour l'analyse multivariée, les séries sont alignées par inner join strict :
+      seules les dates communes à tous les actifs sont conservées, sans interpolation ni report de valeur (<em>no ffill/bfill</em>).
+    </p>
+    <div class="callout">
+      <span class="callout-icon">⚠</span>
+      <div class="callout-body">
+        <strong>Alignement strict :</strong> si la perte d'observations due à l'alignement dépasse 50%
+        pour un actif, le pipeline lève une <code>DataError</code> pour éviter des analyses biaisées.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. STATIONNARITÉ ─────────────────────────────────────────────── -->
+  <div class="method-section" id="sec3">
+    <div class="sec-header">
+      <span class="sec-num">03</span>
+      <h2>Analyse de <em>stationnarité</em></h2>
+    </div>
+    <p>
+      Trois tests sont systématiquement appliqués pour une décision robuste :
+    </p>
+    <table class="data-table">
+      <thead><tr><th>Test</th><th>H₀</th><th>Décision si p &lt; 5%</th><th>Package</th></tr></thead>
+      <tbody>
+        <tr><td class="t-mono">ADF</td><td>Racine unitaire (non stationnaire)</td><td>Rejet → stationnaire</td><td>statsmodels</td></tr>
+        <tr><td class="t-mono">PP</td><td>Racine unitaire</td><td>Rejet → stationnaire</td><td>arch</td></tr>
+        <tr><td class="t-mono">KPSS</td><td>Stationnarité</td><td>Non-rejet → stationnaire</td><td>statsmodels</td></tr>
+      </tbody>
+    </table>
+    <p>
+      En cas de non-stationnarité confirmée (ADF et PP non rejetés, KPSS rejeté), le pipeline différencie
+      la série une fois et re-teste. Les log-rendements sont généralement I(0) pour les actifs financiers courants.
+    </p>
+  </div>
+
+  <!-- ── 4. ARIMA ──────────────────────────────────────────────────────── -->
+  <div class="method-section" id="sec4">
+    <div class="sec-header">
+      <span class="sec-num">04</span>
+      <h2>Modélisation <em>ARIMA</em></h2>
+    </div>
+    <p>
+      La structure ARMA(p,q) est sélectionnée sur une grille <em>p ∈ {0,…,5}</em>, <em>q ∈ {0,…,5}</em>
+      par minimisation du critère d'information AIC (principal) et BIC (confirmation).
+      Le modèle est estimé par maximum de vraisemblance quasi-conditionnel (QML).
+    </p>
+    <div class="formula-block">
+      <span class="formula-label">Modèle ARMA(p,q)</span>
+      r_t = μ + φ₁r_{t-1} + … + φ_p r_{t-p} + θ₁ε_{t-1} + … + θ_q ε_{t-q} + ε_t
+      ε_t ~ i.i.d.(0, σ²)
+    </div>
+    <h3>Diagnostics post-estimation</h3>
+    <ul>
+      <li>Test de Ljung-Box sur les résidus (blancheur) et sur les résidus au carré (effets ARCH)</li>
+      <li>Test de Jarque-Bera sur la normalité des résidus</li>
+      <li>Vérification de l'invertibilité (racines du polynôme MA dans le cercle unité)</li>
+      <li>Prévisions à horizon <em>h</em> avec intervalles de confiance bootstrap (1 000 tirages)</li>
+    </ul>
+  </div>
+
+  <!-- ── 5. GARCH ──────────────────────────────────────────────────────── -->
+  <div class="method-section" id="sec5">
+    <div class="sec-header">
+      <span class="sec-num">05</span>
+      <h2>Modélisation GARCH et <em>variance conditionnelle</em></h2>
+    </div>
+    <p>
+      La variance conditionnelle est modélisée via un grid search exhaustif sur <strong>5 spécifications</strong>
+      et <strong>4 distributions d'erreurs</strong>, soit 20 modèles évalués par actif.
+    </p>
+    <table class="data-table">
+      <thead><tr><th>Spécification</th><th>Caractéristique</th></tr></thead>
+      <tbody>
+        <tr><td class="t-mono">GARCH(1,1)</td><td>Référence symétrique</td></tr>
+        <tr><td class="t-mono">EGARCH(1,1)</td><td>Asymétrie via log-variance (Nelson 1991)</td></tr>
+        <tr><td class="t-mono">GJR-GARCH(1,1)</td><td>Effet levier additionnel (Glosten et al. 1993)</td></tr>
+        <tr><td class="t-mono">TGARCH(1,1)</td><td>Asymétrie sur σ (Zakoïan 1994)</td></tr>
+        <tr><td class="t-mono">FIGARCH(1,d,1)</td><td>Longue mémoire dans la variance (Baillie et al. 1996)</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:16px">
+      Les distributions testées sont : Normale, Student-t, GED (Generalized Error), Skew-t.
+      Le modèle retenu minimise un score composite : AIC en sample (70%) + erreur de couverture VaR OOS (30%).
+    </p>
+    <div class="formula-block">
+      <span class="formula-label">GJR-GARCH(1,1) — formulation</span>
+      σ²_t = ω + (α + γ·𝟙[ε_{t-1}&lt;0])·ε²_{t-1} + β·σ²_{t-1}
+      Contraintes de stationnarité : α + β + γ/2 &lt; 1
+    </div>
+  </div>
+
+  <!-- ── 6. VAR ────────────────────────────────────────────────────────── -->
+  <div class="method-section" id="sec6">
+    <div class="sec-header">
+      <span class="sec-num">06</span>
+      <h2>Value-at-Risk et <em>backtests</em></h2>
+    </div>
+    <p>
+      Six méthodes de VaR à 99% sont calculées sur un horizon d'un jour. La VaR représente
+      le quantile à 1% de la distribution des pertes — c'est-à-dire le niveau de perte dépassé
+      en moyenne un jour sur cent.
+    </p>
+    <table class="data-table">
+      <thead><tr><th>Méthode</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="t-mono">GARCH</td><td>Quantile de la distribution GARCH estimée (meilleur modèle)</td></tr>
+        <tr><td class="t-mono">FHS</td><td>Filtered Historical Simulation (Barone-Adesi 1999) — résidus filtrés bootstrappés</td></tr>
+        <tr><td class="t-mono">Historique</td><td>Quantile empirique des 500 derniers rendements</td></tr>
+        <tr><td class="t-mono">Normale</td><td>z_{1%} × σ̂ (distribution normale)</td></tr>
+        <tr><td class="t-mono">Student</td><td>t_{ν,1%} × σ̂ (distribution Student avec ν degrés de liberté)</td></tr>
+        <tr><td class="t-mono">Cornish-Fisher</td><td>Expansion CF ajustant pour skewness et kurtosis</td></tr>
+      </tbody>
+    </table>
+    <h3>Backtests de validation</h3>
+    <ul>
+      <li><strong>Kupiec (1995) :</strong> test de proportion d'exceptions — H₀ : fréquence d'exceptions = niveau nominal (1%)</li>
+      <li><strong>Christoffersen (1998) :</strong> test d'indépendance des exceptions — H₀ : exceptions non clustérisées</li>
+      <li><strong>FRTB / Bâle III :</strong> classification feu tricolore (vert &lt;5 exceptions / 250j, orange 5–9, rouge ≥10)</li>
+    </ul>
+    <p>
+      La <strong>TVaR</strong> (Tail VaR, ou Expected Shortfall) est calculée comme la moyenne des
+      pertes conditionnellement au dépassement de la VaR : ES = E[r_t | r_t &lt; VaR].
+    </p>
+  </div>
+
+  <!-- ── 7. RUPTURES ─────────────────────────────────────────────────── -->
+  <div class="method-section" id="sec7">
+    <div class="sec-header">
+      <span class="sec-num">07</span>
+      <h2>Ruptures structurelles <em>(ICSS)</em></h2>
+    </div>
+    <p>
+      La méthode ICSS (Iterated Cumulative Sum of Squares, Inclan & Tiao 1994) détecte
+      les changements de régime de variance sans supposer leur nombre a priori.
+      La statistique IT est construite sur les résidus au carré :
+    </p>
+    <div class="formula-block">
+      <span class="formula-label">Statistique ICSS</span>
+      C_k = Σ_{t=1}^{k} ε²_t / Σ_{t=1}^{T} ε²_t − k/T
+      IT = max|C_k| · √(T/2)
+      Rejet H₀ (variance constante) si IT &gt; seuil critique à 5%
+    </div>
+    <p>
+      Les dates de rupture identifiées correspondent typiquement aux crises majeures :
+      2008–2009 (crise financière), 2014–2016 (chute du pétrole), 2020 (Covid-19), 2022 (Ukraine).
+    </p>
+  </div>
+
+  <!-- ── 8. VAR MULTIVARIÉ ────────────────────────────────────────────── -->
+  <div class="method-section" id="sec8">
+    <div class="sec-header">
+      <span class="sec-num">08</span>
+      <h2>VAR Multivarié</h2>
+    </div>
+    <p>
+      Le module VAR (Vector Autoregression) modélise la dynamique jointe de <em>k ≥ 2 actifs</em>.
+      L'ordre <em>p</em> est sélectionné par quatre critères : AIC, BIC, HQIC et FPE. Le critère retenu
+      est l'AIC avec confirmation de stabilité.
+    </p>
+    <div class="formula-block">
+      <span class="formula-label">VAR(p) — forme matricielle</span>
+      y_t = c + A₁y_{t-1} + A₂y_{t-2} + … + A_p y_{t-p} + ε_t
+      ε_t ~ (0, Σ)  Σ = matrice de covariance contemporaine
+      Stabilité : toutes racines du polynôme caractéristique |z| &gt; 1
+                  (équivalent : racines inverses |z| &lt; 1)
+    </div>
+    <h3>Causalité de Granger</h3>
+    <p>
+      Le test de Granger (1969) vérifie si les valeurs passées de <em>X</em> améliorent
+      la prévision de <em>Y</em> au-delà de sa propre histoire (test F sur restrictions linéaires).
+      Il est calculé dans les deux sens pour chaque paire.
+    </p>
+    <h3>Fonctions de Réponse Impulsionnelle (IRF)</h3>
+    <p>
+      Les IRF orthogonalisées (décomposition de Cholesky) mesurent la réponse de chaque variable
+      à un choc unitaire dans une autre. L'ordre de Cholesky est alphabétique (déterministe).
+      Horizon par défaut : 8 périodes.
+    </p>
+    <h3>Décomposition de la Variance de l'Erreur de Prévision (FEVD)</h3>
+    <p>
+      La FEVD indique quelle fraction de la variance d'erreur de prévision à l'horizon <em>h</em>
+      est attribuable à chaque choc. Par construction, les parts somment à 1 pour chaque (h, variable).
+    </p>
+    <div class="callout">
+      <span class="callout-icon">✓</span>
+      <div class="callout-body">
+        <strong>Test DGP 6/6 :</strong> le module VAR est validé contre un processus générateur de données
+        connu (VAR(2) avec causalité unidirectionnelle X→Y). Les 6 critères — ordre, stabilité,
+        Granger, FEVD, diagnostics et coefficients — doivent tous passer pour que le module soit
+        considéré opérationnel.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 9. RAPPORT ─────────────────────────────────────────────────── -->
+  <div class="method-section" id="sec9">
+    <div class="sec-header">
+      <span class="sec-num">09</span>
+      <h2>Rapport PDF et <em>prose IA</em></h2>
+    </div>
+    <p>
+      Le rapport est généré en LaTeX via la chaîne <code>pdflatex</code> (mode classique) avec
+      un fallback en mode texte si LaTeX n'est pas disponible. Il comprend :
+    </p>
+    <ul>
+      <li>Tables de coefficients avec statistiques t et niveaux de significativité (*, **, ***)</li>
+      <li>Figures haute résolution : prix, rendements, ACF/PACF, volatilité conditionnelle, VaR dynamique</li>
+      <li>IRF et FEVD (mode multivarié)</li>
+      <li>Prose économétrique rédigée par Claude Opus : interprétation des résultats, contextualisation économique</li>
+    </ul>
+    <p>
+      Le rapport suit les conventions typographiques des revues <em>Journal of Finance</em>,
+      <em>Journal of Financial Economics</em> et <em>Journal of Financial and Quantitative Analysis</em>.
+    </p>
+  </div>
+
+  <!-- ── 10. RÉFÉRENCES ─────────────────────────────────────────────── -->
+  <div class="method-section" id="sec10">
+    <div class="sec-header">
+      <span class="sec-num">10</span>
+      <h2>Références <em>bibliographiques</em></h2>
+    </div>
+    <div class="ref-list">
+      <div class="ref-item">Baillie, R.T., Bollerslev, T., Mikkelsen, H.O. (1996). <em>Fractionally integrated generalized autoregressive conditional heteroskedasticity.</em> Journal of Econometrics, 74, 3–30.</div>
+      <div class="ref-item">Barone-Adesi, G., Giannopoulos, K., Vosper, L. (1999). <em>VaR without correlations for portfolios of derivative securities.</em> Journal of Futures Markets, 19, 583–602.</div>
+      <div class="ref-item">Bollerslev, T. (1986). <em>Generalized autoregressive conditional heteroskedasticity.</em> Journal of Econometrics, 31, 307–327.</div>
+      <div class="ref-item">Christoffersen, P. (1998). <em>Evaluating interval forecasts.</em> International Economic Review, 39, 841–862.</div>
+      <div class="ref-item">Engle, R.F. (1982). <em>Autoregressive conditional heteroscedasticity with estimates of the variance of United Kingdom inflation.</em> Econometrica, 50, 987–1007.</div>
+      <div class="ref-item">Engle, R.F. (2002). <em>Dynamic conditional correlation: a simple class of multivariate GARCH models.</em> Journal of Business & Economic Statistics, 20, 339–350.</div>
+      <div class="ref-item">Glosten, L.R., Jagannathan, R., Runkle, D.E. (1993). <em>On the relation between the expected value and the volatility of the nominal excess return on stocks.</em> Journal of Finance, 48, 1779–1801.</div>
+      <div class="ref-item">Granger, C.W.J. (1969). <em>Investigating causal relations by econometric models and cross-spectral methods.</em> Econometrica, 37, 424–438.</div>
+      <div class="ref-item">Inclan, C., Tiao, G.C. (1994). <em>Use of cumulative sums of squares for retrospective detection of changes of variance.</em> Journal of the American Statistical Association, 89, 913–923.</div>
+      <div class="ref-item">Johansen, S. (1988). <em>Statistical analysis of cointegration vectors.</em> Journal of Economic Dynamics and Control, 12, 231–254.</div>
+      <div class="ref-item">Kupiec, P. (1995). <em>Techniques for verifying the accuracy of risk measurement models.</em> Journal of Derivatives, 3, 73–84.</div>
+      <div class="ref-item">Nelson, D.B. (1991). <em>Conditional heteroskedasticity in asset returns: a new approach.</em> Econometrica, 59, 347–370.</div>
+      <div class="ref-item">Sims, C.A. (1980). <em>Macroeconomics and reality.</em> Econometrica, 48, 1–48.</div>
+    </div>
+  </div>
+
+</div>
+
+<footer style="padding:32px 48px;background:var(--black);color:#fff;margin-top:0">
+  <div style="max-width:900px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+    <p style="font-size:.72rem;color:#555">© 2026 TickerLab · Méthodologie v6.3</p>
+    <div style="display:flex;gap:20px">
+      <a href="landing.html" style="font-size:.72rem;color:#666;text-decoration:none">Accueil</a>
+      <a href="analyse.html" style="font-size:.72rem;color:#666;text-decoration:none">Analyse</a>
+      <a href="contact.html" style="font-size:.72rem;color:#666;text-decoration:none">Contact</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

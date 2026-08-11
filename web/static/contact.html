@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TickerLab — Contact & Support</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#FFFFFF; --surface:#F7F7F7; --border:#E0E0E0;
+      --text:#0A0A0A; --text2:#3A3A3A; --muted:#888888;
+      --black:#000000; --nav-h:60px; --ok:#1a6e2e;
+    }
+    body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; }
+    ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:#ccc}
+
+    nav {
+      position:fixed; top:0; left:0; right:0; z-index:100;
+      height:var(--nav-h); background:var(--bg); border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between; padding:0 48px;
+    }
+    .nav-logo{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--text);text-decoration:none}
+    .nav-links{display:flex;gap:40px;align-items:center}
+    .nav-links a{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .2s}
+    .nav-links a:hover,.nav-links a.active{color:var(--text)}
+
+    .page-wrap{max-width:1100px;margin:0 auto;padding:calc(var(--nav-h)+48px) 48px 80px}
+
+    .page-header{border-bottom:1px solid var(--border);padding-bottom:32px;margin-bottom:56px}
+    .breadcrumb{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+    .breadcrumb a{color:var(--muted);text-decoration:none} .breadcrumb a:hover{color:var(--text)}
+    .breadcrumb span{margin:0 8px}
+    h1{font-family:'Playfair Display',serif;font-size:2rem;font-weight:700}
+    h2{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;margin-bottom:20px}
+    h2 em{font-style:italic}
+
+    section-label{font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:8px}
+
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;margin-bottom:64px}
+    .one-col{margin-bottom:64px}
+    .sep{border:none;border-top:1px solid var(--border);margin:56px 0}
+
+    /* Info cards */
+    .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:48px}
+    .info-card{background:var(--bg);padding:28px 24px;transition:background .2s}
+    .info-card:hover{background:var(--surface)}
+    .ic-icon{font-size:1.4rem;margin-bottom:14px}
+    .ic-label{font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+    .ic-val{font-size:.93rem;font-weight:500;line-height:1.5}
+    .ic-sub{font-size:.75rem;color:var(--muted);margin-top:4px;line-height:1.5}
+
+    /* Contact form */
+    .form-panel{border:1px solid var(--border)}
+    .form-section{padding:28px}
+    label{display:block;font-size:.8rem;font-weight:500;color:var(--text2);margin-bottom:6px}
+    input[type=text],input[type=email],select,textarea{
+      width:100%;padding:10px 12px;border:1px solid var(--border);background:var(--bg);
+      font-family:'Inter',sans-serif;font-size:.85rem;color:var(--text);
+      outline:none;transition:border-color .2s;resize:vertical;
+    }
+    input:focus,select:focus,textarea:focus{border-color:var(--black)}
+    .field{margin-bottom:20px} .field:last-child{margin-bottom:0}
+    .field-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .btn-submit{
+      background:var(--black);color:#fff;border:none;cursor:pointer;
+      font-size:.78rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+      padding:13px 32px;transition:opacity .2s;display:inline-block;
+    }
+    .btn-submit:hover{opacity:.8}
+    .form-success{
+      background:var(--surface);border:1px solid var(--border);padding:20px 24px;
+      font-size:.85rem;line-height:1.6;display:none;
+    }
+
+    /* SAV tiers */
+    .sav-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:32px}
+    .sav-card{background:var(--bg);padding:28px 24px}
+    .sav-card.featured{background:var(--black);color:#fff}
+    .sav-tier{font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+    .sav-card.featured .sav-tier{color:#888}
+    .sav-name{font-size:1.1rem;font-weight:600;margin-bottom:12px}
+    .sav-price{font-family:'DM Mono',monospace;font-size:.85rem;color:var(--muted);margin-bottom:16px}
+    .sav-card.featured .sav-price{color:#666}
+    .sav-features{list-style:none;display:flex;flex-direction:column;gap:9px}
+    .sav-features li{font-size:.8rem;line-height:1.5;display:flex;align-items:flex-start;gap:8px}
+    .sav-features li::before{content:'—';flex-shrink:0;color:var(--muted)}
+    .sav-card.featured .sav-features li{color:#ccc}
+    .sav-card.featured .sav-features li::before{color:#555}
+
+    /* FAQ */
+    .faq-list{border-top:1px solid var(--border)}
+    .faq-item{border-bottom:1px solid var(--border)}
+    .faq-q{
+      width:100%;text-align:left;padding:20px 0;background:none;border:none;cursor:pointer;
+      display:flex;justify-content:space-between;align-items:center;gap:16px;
+      font-size:.93rem;font-weight:500;color:var(--text);
+    }
+    .faq-q:hover{color:var(--black)}
+    .faq-icon{font-size:1.2rem;color:var(--muted);flex-shrink:0;transition:transform .25s}
+    .faq-a{display:none;padding:0 0 20px;font-size:.85rem;color:var(--text2);line-height:1.75;max-width:640px}
+    .faq-a a{color:var(--text);text-decoration:underline}
+    .faq-item.open .faq-a{display:block}
+    .faq-item.open .faq-icon{transform:rotate(45deg)}
+
+    /* Methodology promo */
+    .method-promo{
+      border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;
+      padding:32px 36px;gap:32px;flex-wrap:wrap;
+    }
+    .method-promo h3{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;margin-bottom:8px}
+    .method-promo p{font-size:.85rem;color:var(--muted);line-height:1.7;max-width:480px}
+    .btn{font-size:.75rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:12px 24px;text-decoration:none;display:inline-block;white-space:nowrap}
+    .btn-black{background:var(--black);color:#fff;transition:opacity .2s}.btn-black:hover{opacity:.8}
+    .btn-ghost{border:1px solid var(--border);color:var(--text2);transition:border-color .2s}.btn-ghost:hover{border-color:var(--text);color:var(--text)}
+
+    footer{padding:40px 48px;background:var(--black);color:#fff;margin-top:0}
+    .footer-inner{max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+    .footer-inner p{font-size:.75rem;color:#555}
+    .footer-links{display:flex;gap:24px}
+    .footer-links a{font-size:.75rem;color:#666;text-decoration:none} .footer-links a:hover{color:#fff}
+
+    @media(max-width:900px){
+      nav{padding:0 20px} .nav-links{display:none}
+      .page-wrap{padding-left:16px;padding-right:16px}
+      .two-col{grid-template-columns:1fr}
+      .info-grid,.sav-grid{grid-template-columns:1fr}
+      .method-promo{flex-direction:column;align-items:flex-start}
+      .field-row{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="landing.html">TickerLab</a>
+  <div class="nav-links">
+    <a href="analyse.html">Analyse</a>
+    <a href="landing.html#modules">Modules</a>
+    <a href="methodologie.html">Méthodologie</a>
+    <a href="contact.html" class="active">Contact</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="landing.html">Accueil</a><span>›</span>Contact & Support
+    </div>
+    <h1>Contact & <em>Service Après-Vente</em></h1>
+  </div>
+
+  <!-- ── COORDONNÉES ────────────────────────────────────────────────────────── -->
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="ic-icon">✉️</div>
+      <div class="ic-label">Email support</div>
+      <div class="ic-val">yazanel.tarik@gmail.com</div>
+      <div class="ic-sub">Réponse sous 24–48h ouvrées</div>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">⏱</div>
+      <div class="ic-label">Délai de réponse</div>
+      <div class="ic-val">24 à 48 heures</div>
+      <div class="ic-sub">Jours ouvrés · Hors week-end et jours fériés</div>
+    </div>
+    <div class="info-card">
+      <div class="ic-icon">📄</div>
+      <div class="ic-label">Documentation</div>
+      <div class="ic-val"><a href="methodologie.html" style="color:var(--text)">Lire la méthodologie →</a></div>
+      <div class="ic-sub">Processus complet des analyses en PDF</div>
+    </div>
+  </div>
+
+  <!-- ── FORMULAIRE + SAV ─────────────────────────────────────────────────── -->
+  <div class="two-col">
+
+    <!-- Formulaire -->
+    <div>
+      <span class="section-label" style="display:block;font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:20px">Formulaire de contact</span>
+      <h2>Envoyer un <em>message</em></h2>
+
+      <div class="form-panel">
+        <div class="form-section">
+          <div class="field-row">
+            <div class="field">
+              <label>Prénom</label>
+              <input type="text" id="f-prenom" placeholder="Votre prénom" />
+            </div>
+            <div class="field">
+              <label>Nom</label>
+              <input type="text" id="f-nom" placeholder="Votre nom" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Adresse e-mail</label>
+            <input type="email" id="f-email" placeholder="vous@exemple.fr" />
+          </div>
+          <div class="field">
+            <label>Sujet</label>
+            <select id="f-sujet">
+              <option>Question sur une analyse</option>
+              <option>Problème technique (bug)</option>
+              <option>Résultat inattendu</option>
+              <option>Demande de fonctionnalité</option>
+              <option>Autre</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Message</label>
+            <textarea id="f-message" rows="5" placeholder="Décrivez votre question ou problème en détail…"></textarea>
+          </div>
+          <div class="field">
+            <label>Niveau d'urgence</label>
+            <select id="f-urgence">
+              <option value="normal">Normal — réponse sous 48h</option>
+              <option value="urgent">Urgent — réponse sous 24h</option>
+            </select>
+          </div>
+          <button class="btn-submit" onclick="submitForm()">Envoyer le message</button>
+          <div class="form-success" id="form-success">
+            ✓ &nbsp;Message envoyé. Vous recevrez une réponse sous 24–48h à l'adresse indiquée.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SAV / Engagements -->
+    <div>
+      <span class="section-label" style="display:block;font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:20px">Engagements de service</span>
+      <h2>Niveaux de <em>Support</em></h2>
+
+      <div class="sav-grid" style="margin-bottom:24px">
+        <div class="sav-card">
+          <div class="sav-tier">Tier 1</div>
+          <div class="sav-name">Communauté</div>
+          <div class="sav-price">Gratuit</div>
+          <ul class="sav-features">
+            <li>Documentation complète</li>
+            <li>Méthodologie PDF téléchargeable</li>
+            <li>FAQ en ligne</li>
+            <li>Email support (48h)</li>
+          </ul>
+        </div>
+        <div class="sav-card featured">
+          <div class="sav-tier">Tier 2</div>
+          <div class="sav-name">Professionnel</div>
+          <div class="sav-price">Sur devis</div>
+          <ul class="sav-features">
+            <li>Réponse prioritaire (24h)</li>
+            <li>Appel de diagnostic inclus</li>
+            <li>Personnalisation du rapport PDF</li>
+            <li>Ajout de modules sur demande</li>
+          </ul>
+        </div>
+        <div class="sav-card">
+          <div class="sav-tier">Tier 3</div>
+          <div class="sav-name">Institutionnel</div>
+          <div class="sav-price">Sur devis</div>
+          <ul class="sav-features">
+            <li>SLA défini contractuellement</li>
+            <li>Déploiement cloud dédié</li>
+            <li>Formation équipe</li>
+            <li>Modules métier spécifiques</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="font-size:.8rem;color:var(--muted);line-height:1.75;border-left:2px solid var(--border);padding-left:16px">
+        Pour toute demande institutionnelle ou partenariat, utilisez le formulaire
+        avec le sujet « Autre » en précisant votre organisation.
+        Un retour personnalisé vous sera adressé sous 24h ouvrées.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MÉTHODOLOGIE CTA ───────────────────────────────────────────────────── -->
+  <div class="method-promo">
+    <div>
+      <h3>Comprendre la <em>méthodologie</em></h3>
+      <p>
+        Document de référence complet : stationnarité, ARIMA, GARCH, VaR, backtests,
+        VAR multivarié. Idéal pour valider et présenter les résultats en contexte académique ou professionnel.
+      </p>
+    </div>
+    <div style="display:flex;gap:12px;flex-shrink:0">
+      <a href="methodologie.html" class="btn btn-black">Lire en ligne</a>
+      <a href="methodologie.html#print" class="btn btn-ghost" onclick="window.open('methodologie.html','_blank');return false">Télécharger PDF →</a>
+    </div>
+  </div>
+
+  <hr class="sep" id="faq">
+
+  <!-- ── FAQ ──────────────────────────────────────────────────────────────── -->
+  <div class="one-col">
+    <span class="section-label" style="display:block;font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:20px">Foire aux questions</span>
+    <h2>Questions <em>fréquentes</em></h2>
+
+    <div class="faq-list" id="faq-list">
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Quels actifs puis-je analyser ?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">
+          Tout actif disponible sur Yahoo Finance via son ticker. Les plus courants : pétrole Brent (<strong>BZ=F</strong>), WTI (<strong>CL=F</strong>), or (<strong>GC=F</strong>), argent (<strong>SI=F</strong>), S&P 500 (<strong>^GSPC</strong>), CAC 40 (<strong>^FCHI</strong>), indices et actions individuelles. Le pipeline fonctionne sur des données journalières, hebdomadaires ou mensuelles.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Comment interpréter la VaR affichée ?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">
+          La VaR à 99% représente la perte maximale que l'on ne dépasse pas dans 99% des cas sur un horizon de 1 jour. Par exemple, une VaR de −4.38% signifie que dans 99% des jours, la perte journalière reste inférieure à 4.38% de la position. La TVaR (Tail VaR, ou Expected Shortfall) est la moyenne des pertes au-delà de ce seuil. Le rapport inclut les tests de Kupiec et Christoffersen pour valider statistiquement le modèle. Voir la <a href="methodologie.html">méthodologie complète</a>.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Que fait le test de Granger dans le VAR multivarié ?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">
+          Le test de causalité de Granger examine si les valeurs passées d'une variable (ex : WTI) aident à prédire une autre (ex : Brent), au-delà de ce que prédit la propre histoire de cette variable. Ce n'est pas une causalité au sens strict mais une prévisibilité statistique. La pipeline effectue le test dans les deux sens pour chaque paire d'actifs inclus dans le VAR.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Le pipeline fonctionne-t-il sans connexion internet ?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">
+          Le téléchargement des données requiert une connexion (Yahoo Finance via yfinance). Une fois les données téléchargées, tous les calculs économétriques et la compilation LaTeX sont réalisés localement. La génération du rapport IA (Claude Opus) requiert une clé API Anthropic et une connexion, mais est optionnelle.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Mon analyse prend plus de 5 minutes — est-ce normal ?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">
+          Oui sur les longues séries ou avec le grid search GARCH complet (5 × 4 configurations). La compilation LaTeX peut prendre 30–60 secondes supplémentaires. Le rapport IA (Claude Opus) ajoute environ 1–2 minutes. Si l'analyse dépasse 15 minutes, vérifiez les logs du serveur FastAPI — un timeout ou une erreur de téléchargement peut bloquer le pipeline.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Puis-je demander un module d'analyse spécifique ?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">
+          Oui. L'architecture du pipeline est modulaire (registre déclaratif). Contactez-nous via le formulaire avec le sujet « Demande de fonctionnalité » en précisant : (1) le modèle économétrique souhaité, (2) les actifs cibles, (3) l'usage prévu (recherche, trading, réglementaire). Les modules les plus demandés sont priorisés dans la roadmap.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Le rapport PDF est-il compatible avec une publication académique ?
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a">
+          Le rapport est généré en LaTeX avec des tableaux de style EViews/Stata et des figures haute résolution (300 dpi). Il suit les conventions des revues d'économétrie et de finance (JFE, JFQA, etc.) pour la présentation des coefficients, statistiques t et niveaux de significativité. Une légère adaptation de la template LaTeX peut être nécessaire selon le journal ciblé.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <p>© 2026 TickerLab · yazanel.tarik@gmail.com</p>
+    <div class="footer-links">
+      <a href="landing.html">Accueil</a>
+      <a href="analyse.html">Analyse</a>
+      <a href="methodologie.html">Méthodologie</a>
+      <a href="contact.html">Contact</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(i=>i.classList.remove('open'));
+  if (!isOpen) item.classList.add('open');
+}
+
+function submitForm() {
+  const p = document.getElementById('f-prenom').value.trim();
+  const n = document.getElementById('f-nom').value.trim();
+  const e = document.getElementById('f-email').value.trim();
+  const m = document.getElementById('f-message').value.trim();
+  if (!p || !e || !m) { alert('Veuillez remplir au minimum votre prénom, e-mail et message.'); return; }
+  // Simulation locale — remplacer par un fetch POST vers une route API ou mailto
+  const subj = encodeURIComponent(document.getElementById('f-sujet').value);
+  const body = encodeURIComponent(`De : ${p} ${n}\n\n${m}`);
+  window.location.href = `mailto:yazanel.tarik@gmail.com?subject=${subj}&body=${body}`;
+  document.getElementById('form-success').style.display = 'block';
+}
+</script>
+</body>
+</html>

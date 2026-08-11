@@ -1,0 +1,101 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tickerlab"
+version = "6.3.1"
+description = "Pipeline d'analyse de volatilite et de VaR pour actifs PEA"
+requires-python = ">=3.11"
+dependencies = [
+    "arch>=6.0",
+    "statsmodels>=0.14",
+    "scipy>=1.10",
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "matplotlib>=3.7",
+    "yfinance>=0.2",
+    "tqdm>=4.60",
+    "pyyaml>=6.0",
+    "pydantic>=2.0",
+    "reportlab>=4.0",          # importé par core/rapport/* et export_academique
+                               # — sans lui, `pip install tickerlab` casse à la
+                               # génération du PDF (ImportError).
+]
+
+[project.optional-dependencies]
+ai = [
+    "anthropic>=0.40",
+    "openai>=1.0",
+]
+web = [                        # couche FastAPI (ex requirements-web.txt)
+    "fastapi>=0.110",          # Permet `pip install tickerlab[web]`.
+    "uvicorn[standard]>=0.27",
+    "python-dotenv>=1.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+]
+
+[project.scripts]
+tickerlab = "tickerlab.cli:main"
+tickerlab-web = "tickerlab.web.app:main"   # entry-point référencé dans web/app.py
+
+# ── Package discovery ─────────────────────────────────────────────────────────
+# Le repertoire racine EST le package tickerlab (pas de sous-dossier src/).
+# Les packages sont listes exhaustivement pour exclure dev/, scripts/, tests/,
+# resultats/, templates/, prompts/ du wheel distribue.
+[tool.setuptools]
+packages = [
+    "tickerlab",
+    "tickerlab.core",
+    "tickerlab.core.rapport",
+    "tickerlab.core.rapport.sections",
+    "tickerlab.utils",
+    "tickerlab.web",           # nécessaire pour que l'entry-point tickerlab-web soit packagé
+]
+
+[tool.setuptools.package-dir]
+"tickerlab"              = "."
+"tickerlab.core"         = "core"
+"tickerlab.core.rapport"          = "core/rapport"
+"tickerlab.core.rapport.sections" = "core/rapport/sections"
+"tickerlab.utils"                 = "utils"
+"tickerlab.web"          = "web"
+
+[tool.setuptools.package-data]
+"tickerlab" = [
+    "prompts/*.txt",
+    "templates/latex_doc/*",
+]
+"tickerlab.web" = [
+    "static/*",                # sert les pages HTML depuis le wheel
+]
+
+# ── Pytest ────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "network: test nécessitant un accès réseau (désactivé en CI)",
+    "slow: test lent (estimation GARCH réelle, >5s)",
+]
+
+# ── Coverage ──────────────────────────────────────────────────────────────────
+[tool.coverage.run]
+source = ["core", "."]
+omit = [
+    "tests/*",
+    "*/rapport/_sections*.py",  # couvre _sections.py ET les sous-modules
+                                # sections/*.py issus de la découpe (Chantier 2)
+    "scripts/*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+precision = 1
+show_missing = true
+# Pas de fail_under global : _sections.py, export_academique.py et monitoring.py
+# (0% de couverture unitaire) tireraient la moyenne sous 40% artificiellement.
+# Le seuil bloquant est ciblé par module dans scripts/check_coverage_gate.py.

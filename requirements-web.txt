@@ -1,0 +1,5 @@
+# Dépendances de la couche web (FastAPI). Séparées du pipeline : n'impactent
+# pas requirements.txt ni l'exécution économétrique.
+fastapi>=0.110
+uvicorn[standard]>=0.27
+python-dotenv>=1.0

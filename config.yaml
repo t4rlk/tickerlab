@@ -1,0 +1,257 @@
+data:
+  ticker: "BZ=F"
+  start_date: "2006-01-01"
+  end_date: "2026-01-01"
+  frequency: "weekly"   # daily | weekly | monthly
+  min_observations: 250   # minimum pour estimation GARCH fiable (Bollerslev 1986)
+  max_nan_ratio: 0.10     # part max de prix manquants tolérée avant rejet
+
+arima:
+  p_max: 4
+  q_max: 4
+  seuil_significativite: 0.10
+  preference_parcimonie: true
+  tolerance_aic_parcimonie: 10
+
+garch:
+  modeles: ["GARCH", "GJR-GARCH", "EGARCH", "TGARCH", "APARCH"]
+  distributions: ["normal", "t", "skewt", "ged"]
+  p_max: 3
+  q_max: 3
+  seuil_significativite: 0.05
+  inclure_figarch: false
+  critere_significativite: "variance_seule"   # ou "global" (vol + dist + mean)
+  tolerance_aic_parcimonie: 10.0              # [LEGACY] ancienne fenetre B&A — remplacee par tolerance_delta_critere_brut
+  seuil_engle_ng: 0.05                        # [LEGACY] seuil Engle-Ng ancien algo — remplace par specification_tests.engle_ng
+
+  # ── Nouveaux parametres (refonte scientifique v5.x) ─────────────────────
+  critere_information: "AIC"                  # "AIC" | "BIC" | "HQIC" — critere de selection principal
+  tolerance_delta_critere_brut: 4.0           # Burnham-Anderson : delta_IC_brut < 4 = equivalence (B&A 2002 Table 2)
+  specification_tests:
+    ljung_box_z:   {lags: 10, seuil_p: 0.05}  # LB sur z_t : absence d'autocorrelation
+    ljung_box_z2:  {lags: 10, seuil_p: 0.05}  # LB sur z_t^2 : absence d'effet ARCH residuel
+    engle_ng:      {seuil_p: 0.05}             # Engle-Ng 1993 : absence d'asymetrie residuelle
+  validation_oos:
+    active: true
+    seuil_kupiec_p: 0.05                       # Kupiec 1995 : rejet si p < seuil (alerte, pas elimination)
+    seuil_christoffersen_p: 0.05               # Christoffersen 1998 : idem
+
+  # ── Diagnostic IGARCH post-hoc (Phase 1.2) ───────────────────────────────
+  seuil_igarch: 0.98             # persistance > seuil → alerte near-IGARCH
+                                 # (zone 0.98-0.99 recommandée, Engle & Bollerslev 1986,
+                                 #  Lamoureux & Lastrapes 1990)
+
+  # ── Score composite v6 (Tache 1 — desactive par defaut) ──────────────────
+  score_composite:
+    enabled: false                             # true = etage 3 par rang pondere (vs parcimonie seule)
+    w_aic:       0.30                          # poids rang AIC (critere IC principal)
+    w_lb_z2:     0.25                          # poids rang LB z_t^2 (absence ARCH residuel)
+    w_engle_ng:  0.15                          # poids rang Engle-Ng (absence asymetrie)
+    w_berkowitz: 0.20                          # poids rang Berkowitz PIT LR (distribution)
+    w_parcimonie: 0.10                         # poids rang complexite p+o+q (parcimonie)
+
+# ── FHS (Phase 1.4 — Barone-Adesi, Giannopoulos & Vosper 1999) ─────────────
+# Filtered Historical Simulation : volatilite GARCH conditionnelle + distribution
+# empirique des innovations z_t = e_t / s_t (non-parametrique).
+# La force du FHS vs parametrique se revele sur H >= 5 : la regle sqrt(H)
+# sous-estime le risque lorsque les queues empiriques sont plus epaisses que
+# la distribution parametrique retenue. Voir section 8.5bis du PDF.
+fhs:
+  enabled: true
+  n_boot: 10000              # simulations production (VaR + ES par horizon)
+  n_boot_backtest: 2000      # reserve backtest rolling (non utilise en OOS statique)
+  horizons: [1, 5, 10, 22]  # aligne sur var.horizons (Bale III 10j, FRTB 22j)
+  seed: 42                   # seed fixe = reproductibilite scientifique (audit Bale)
+                             # null = mode recherche (etude de la variance MC de la VaR)
+
+# ── DM + GK (Phase 1.5 — Diebold-Mariano 1995 + Giacomini-Komunjer 2005) ────
+# Comparaison statistique des methodes VaR par perte tick (Gonzalez-Rivera 2004).
+# DM : egalite de perte esperee inconditionnelle (stat N(0,1), bilateral).
+# GK : egalite de perte esperee CONDITIONNELLE (stat chi2(q), unilateral droit).
+# La direction du gain se lit dans signe(d_bar) du DM — pas dans GK.
+dm_gk:
+  enabled: true
+  test_type: 'gk'              # 'gk' = Giacomini-Komunjer 2005 (cahier des charges)
+                               # 'gw' = alternative justifiee (GW 2006 asymptotiquement
+                               #         equivalent sur ce cas d'usage — Patton & Timmermann 2007)
+  alpha_test: 0.05             # seuil bilateral DM et unilateral droit GK (standard)
+  alpha_test_petit_echantillon: 0.10  # auto si T_oos < 500 (puissance insuffisante a 5%)
+  hac_lags: 'auto'             # 'auto' = int(T_oos^(1/3)) — Andrews 1991
+  n_instruments_gk: 2          # q = dim(Z_t) : 1 = [1], 2 = [1, d_{t-1}]
+  paires_section_principale:   # 3 paires section 8.6 PDF (lisible)
+    - 'GARCH dyn._vs_FHS'
+    - 'Historique_vs_FHS'
+    - 'GARCH dyn._vs_Historique'
+  # Toutes les paires disponibles (C(7,2)=21) sont dans le dict de retour
+  # pour l'annexe — section 8.6 affiche les 3 paires structurantes uniquement.
+
+# ── Component GARCH (Phase 1.3 — Engle & Lee 1999) ──────────────────────────
+# Décomposition permanente/transitoire de la variance conditionnelle.
+# Déclenché si enabled=true ET (near_igarch=true OU force_estimation=true).
+component_garch:
+  enabled: true              # true = module actif (estimé si near_igarch ou force)
+  force_estimation: false    # true = toujours estimer, même si persistance < seuil_igarch
+                             # (mode recherche — peut ralentir le pipeline)
+  seuil_persistance: 0.98   # aligné avec garch.seuil_igarch — coherence diagnostics
+
+var:
+  # ── VaR statique (niveaux + Monte-Carlo) ─────────────────────────────────
+  niveaux: [0.90, 0.95, 0.99]
+  n_simulations_mc: 50000
+  # ── Multi-horizons Bale III ───────────────────────────────────────────────
+  horizons: [1, 5, 10, 22]           # horizons en jours ouvrables (Bale III = 10j)
+  n_simulations_horizons: 10000      # trajectoires GARCH pour la simulation H-step
+
+backtest:
+  split_ratio: 0.70
+  niveaux_test: [0.95, 0.99]
+  seuil_p_value: 0.05
+  # ── Tests FRTB-grade (Tache 3 — desactives par defaut) ───────────────────
+  tests_frtb:
+    enabled: false                             # true = calcule DQ, AS, Lopez, FZ0, traffic light
+    lags_dq: 4                                 # lags du test DQ (Engle & Manganelli 2004)
+    n_sim_as: 10000                            # simulations bootstrap Acerbi-Szekely p-value
+
+output:
+  dossier_resultats: "resultats/"
+  sous_dossier_par_ticker: true              # CLI analyze : resultats/{slug}/ au lieu de resultats/ (false = ancien comportement)
+  format_graphiques: ["png", "pdf"]
+  dpi: 300
+  export_latex: true
+  export_excel: true
+  pdf_unique: true
+  force_clean: false
+
+events:
+  crises:
+    - {annee: 2008, label: "Crise financière"}
+    - {annee: 2014, label: "Contre-choc pétrolier"}
+    - {annee: 2020, label: "Choc COVID"}
+    - {annee: 2022, label: "Guerre Ukraine"}
+
+rapport:
+  theme: "academique"   # academique | monochrome | eviews | minimal | sombre
+  var_niveaux_graphique: [0.95, 0.99]   # niveaux traces sur les figures (subset de var.niveaux)
+  # ── Pagination v6 (Tache 5) ───────────────────────────────────────────────
+  une_page_un_message: true             # true = saut de page apres chaque sous-section
+  max_lignes_par_tableau: 12            # decoupage automatique des tableaux longs
+  lags_ljung_box_rapport: [1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 24, 36]  # lags affiches dans les correlogrammes
+
+sorties_etendues:
+  correlogramme_lags: 36
+  ljung_box_lags: 10
+  stats_descriptives_decimales: 4
+
+# ai.enabled  : active/désactive l'étape rédaction IA (porte d'entrée)
+# ai_writer.* : toute la configuration du writer (fournisseur, modèle, sections…)
+ai:
+  enabled: false   # true = rédaction IA + compilation PDF final
+  model: "claude-sonnet-4-5"   # utilisé si ai_writer.fournisseur = anthropic
+
+ai_writer:
+  fournisseur: groq
+  modele: llama-3.3-70b-versatile
+  env_key: GROQ_API_KEY          # NOM de la variable d'environnement, jamais la valeur
+  max_tokens: 4000
+  sections_a_rediger:
+    - "00_avant_propos"
+    - "01_preambule"
+    - "03_introduction"
+    - "04_determinants"
+    - "05_revue_litteraire"
+    - "06_empirique_stationnarite"
+    - "07_arma"
+    - "08_garch"
+    - "09_var"
+    - "10_tvar"
+    - "11_backtest"
+    - "12_conclusion"
+
+# ── Rolling backtest (Tâche 2 — re-estimation mensuelle fenetre glissante) ────
+rolling_backtest:
+  enabled: true                      # true = lance le rolling (cache le resultat)
+  window_size: 800                   # taille de la fenetre (~3 ans) — BZ=F weekly n_obs~960
+  refit_every: 22                    # periode de re-estimation en jours (~1 mois)
+  niveaux_test: [0.95, 0.99]         # niveaux VaR a tester
+
+# ── Ruptures structurelles (Condition 3 — Lamoureux & Lastrapes 1990) ─────────
+# L'ICSS (Inclán & Tiao 1994) appliqué aux résidus² du GARCH sélectionné
+# détecte les changements de régime de variance. Si ignorés, ils gonflent
+# artificiellement la persistance α+β (Hillebrand 2005, JoE 129(1-2)).
+# RÈGLE D'OR : le défaut (diagnostic) ne change AUCUN résultat numérique.
+# L'intégration est strictement opt-in via mode: "integrate".
+structural_breaks:
+  enabled: true               # false = module totalement inactif
+  mode: "diagnostic"          # "diagnostic" | "integrate" | "off"
+                              #   diagnostic = détecte + avertit, n'altère PAS l'estimation (défaut sûr)
+                              #   integrate  = injecte les dummies de rupture dans le mean model GARCH (Lamoureux-Lastrapes 1990)
+                              #   off        = détection désactivée (équivaut à enabled:false)
+  methode: "icss"             # "icss" = Inclán-Tiao 1994 (ruptures de variance)
+  seuil_persistance_alerte: 0.97   # warning si persistance > seuil ET n_ruptures >= seuil_n
+  seuil_n_ruptures_alerte: 3       # nb min de ruptures pour déclencher l'alerte
+  max_dummies: 5              # garde-fou : si mode=integrate, plafonne le nb de dummies injectées
+  # ── Paramètres legacy (rapport/_sections.py via detecter_ruptures_brent) ──
+  trim: 0.15                  # fraction exclue en début/fin pour Chow et CUSUM
+  icss:
+    enabled: true             # maintenu pour compatibilité detecter_ruptures_brent
+    alpha: 0.05               # seuil ICSS : crit_val=1.358 à 5%, 1.628 à 1%
+  zivot_andrews:
+    enabled: true
+    regression: "ct"          # 'c' | 't' | 'ct' (modèle C de ZA)
+  injecter_dans_garch: false  # [DEPRECATED] remplacé par mode: "integrate"
+
+# ── Bootstrap IC VaR (Phase 1.6 — Politis-Romano 1994) ───────────────────────
+# Bootstrap stationnaire conditionnel (Pascual-Romo-Ruiz 2006) : parametres GARCH
+# fixes a leur estimation ponctuelle. Quantifie l'incertitude de l'echantillonnage
+# des residus — pas l'incertitude parametrique.
+# Mode express : actif par defaut, rapide (200 reps, ~2-4 s).
+# Mode complet : enabled=true, 500 reps, tous niveaux (cout CPU eleve).
+bootstrap:
+  enabled: false                     # true = mode complet (500 reps, 95% + 99%)
+  n_boot: 500                        # replications mode complet
+  ci_level: 0.95                     # niveau IC mode complet
+  block_size: 10                     # taille bloc mode complet (StationaryBootstrap)
+  # ── Mode express (Phase 1.6) ───────────────────────────────────────────────
+  express: true                      # true = IC express meme si enabled=false
+  n_replications: 200                # replications express (rapide, ~2-4 s)
+  block_length: 10                   # taille du bloc express (Politis-Romano 1994)
+  niveaux_ic: [0.95]                 # niveau(x) express (95% seul suffit)
+  inclure_tvar: false                # TVaR bootstrap : reserve au mode complet
+  seed: 42                           # seed local default_rng (isolation FHS seed=42)
+
+# ── Monitoring dynamique de la VaR ────────────────────────────────────────────
+monitoring:
+  rolling_window: 250                # fenetre glissante pour le ratio d'exceptions
+  ratio_alerte_mult: 2.0             # alerte si ratio > mult * (1 - alpha)
+  # ── CUSUM standardise (Hawkins-Olwell 1998) ─────────────────────────────
+  cusum_delta_detect: 1.0            # magnitude (en sigma) du shift de violation a detecter
+  cusum_h_std: 5.0                   # seuil critique standardise (Hawkins-Olwell 1998, p.27)
+  # [OBSOLETE] anciennes cles non-standardisees — ignorees depuis v5.1
+  cusum_k_mult: 1.0                  # [OBSOLETE] remplace par cusum_delta_detect
+  cusum_h_mult: 5.0                  # [OBSOLETE] remplace par cusum_h_std
+
+# ── Export academique PDF+Excel (dossier persistant) ─────────────────────────
+export_academique:
+  enabled: false                    # true = genere PDF+Excel dans exports/
+  dossier: "exports"                # sous-dossier relatif au dossier parent de resultats/
+  lags_correlogramme: 30            # lags affiches dans les correlogrammes
+  lags_arch_test: [1, 4, 8, 12]    # lags du test ARCH-LM
+
+# ── FRTB / Basel IV (BCBS d457 janvier 2023) — Taches 3 & 4 ─────────────────
+frtb:
+  enabled: false                     # true = calcule sVaR, ES 97.5%, capital IMA, multi-horizon exact
+
+  # ── Niveaux de confiance officiels FRTB ──────────────────────────────────
+  confidence_var: 0.99               # VaR 99% (historique Basel III)
+  confidence_es:  0.975              # ES 97.5% (norme FRTB IMA, BCBS d457 §189)
+
+  # ── sVaR (Stressed Value-at-Risk) ────────────────────────────────────────
+  stressed_window_months: 12         # fenetre de stress en mois calendaires (BCBS d457 §181-187)
+
+  # ── Horizon de capital ────────────────────────────────────────────────────
+  horizon_capital: 10                # horizon VaR pour le capital en jours ouvrables (Bale III = 10j)
+
+  # ── Multiplicateurs feu tricolore (BCBS 1996 / FRTB d457 §§325-336) ──────
+  capital_multiplier_green:      3.0    # 0-4 violations : zone verte
+  capital_multiplier_yellow_max: 3.85   # 5-9 violations : zone jaune (3.40 a 5 viol. -> 3.85 a 9 viol.)
+  capital_multiplier_red:        4.0    # >=10 violations : zone rouge

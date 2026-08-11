@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tickerlab — L'économétrie financière, élevée au rang d'art</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Figtree:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blanc:#FFFFFF;
+  --encre:#141412;
+  --gris:#6B6862;
+  --gris-doux:#9C988F;
+  --filet:#E8E6E1;
+  --voile:#F7F6F4;
+  --achat:#23583B;
+  --vente:#8C3B2E;
+  --serif:'Marcellus',serif;
+  --sans:'Figtree',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--blanc);color:var(--encre);font-family:var(--sans);font-weight:300;font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+img{display:block;width:100%;height:100%;object-fit:cover}
+button{font-family:var(--sans);cursor:pointer}
+
+.wrap{max-width:1200px;margin:0 auto;padding:0 6vw}
+.eyebrow{font-size:11px;letter-spacing:0.35em;text-transform:uppercase;color:var(--gris-doux);font-weight:400}
+.serif{font-family:var(--serif);font-weight:400}
+.reveal{opacity:0;transform:translateY(14px);transition:opacity .9s ease,transform .9s ease}
+.reveal.vu{opacity:1;transform:none}
+@media (prefers-reduced-motion: reduce){.reveal{opacity:1;transform:none;transition:none}}
+
+/* ---------- pages ---------- */
+.page{display:none;padding-top:72px}
+.page.active{display:block}
+
+/* ---------- emplacements d'images ---------- */
+.slot{position:relative;background:var(--voile);overflow:hidden}
+.slot .cadre{position:absolute;inset:14px;border:1px solid var(--filet);pointer-events:none;z-index:2}
+.slot img{position:absolute;inset:0}
+
+/* ---------- navigation ---------- */
+nav{position:fixed;top:0;left:0;right:0;z-index:50;background:rgba(255,255,255,0.96);backdrop-filter:blur(6px);border-bottom:1px solid var(--filet)}
+.nav-in{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:72px;max-width:1400px;margin:0 auto;padding:0 4vw}
+.nav-g,.nav-d{display:flex;align-items:center;gap:2.2rem;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;font-weight:400}
+.nav-d{justify-content:flex-end}
+.nav-in a{position:relative;padding-bottom:3px}
+.nav-in a::after{content:"";position:absolute;left:0;bottom:0;width:0;height:1px;background:var(--encre);transition:width .35s ease}
+.nav-in a:hover::after,.nav-in a:focus-visible::after,.nav-in a.actif::after{width:100%}
+.marque{font-family:var(--serif);font-size:21px;letter-spacing:0.28em;text-transform:uppercase;padding:0 2rem}
+a:focus-visible,button:focus-visible{outline:1px solid var(--encre);outline-offset:4px}
+
+/* ---------- banderole Analyse (mega-menu) ---------- */
+.nav-item{display:flex;align-items:center;height:72px}
+.mega{position:fixed;top:72px;left:0;right:0;background:rgba(255,255,255,0.98);backdrop-filter:blur(6px);border-bottom:1px solid var(--filet);opacity:0;visibility:hidden;transform:translateY(-8px);transition:opacity .35s ease,transform .35s ease,visibility .35s;z-index:49;text-transform:none;letter-spacing:normal;font-weight:300;cursor:default}
+.nav-item:hover .mega,.nav-item:focus-within .mega{opacity:1;visibility:visible;transform:none}
+.mega-in{max-width:1200px;margin:0 auto;padding:3rem 6vw 3.6rem;display:grid;grid-template-columns:repeat(3,1fr);gap:4rem}
+.mega-titre{font-family:var(--serif);font-size:15px;letter-spacing:0.18em;text-transform:uppercase;padding-bottom:1rem;border-bottom:1px solid var(--filet);margin-bottom:1.1rem;font-weight:400}
+.mega-titre em{font-style:normal;font-size:9.5px;letter-spacing:0.24em;color:var(--gris-doux);margin-left:0.8rem;vertical-align:2px}
+.mega a{display:block;font-size:14px;letter-spacing:0.03em;padding:0.6rem 0;transition:opacity .25s}
+.mega a::after{content:none}
+.mega a:hover{opacity:0.5}
+.mega a .detail{display:block;font-size:11px;color:var(--gris-doux);letter-spacing:0.1em;margin-top:2px}
+.mega-off{display:block;font-size:14px;letter-spacing:0.03em;padding:0.6rem 0;color:var(--gris-doux)}
+.mega-off .detail{display:block;font-size:11px;letter-spacing:0.1em;margin-top:2px;opacity:0.8}
+@media (max-width:900px){.mega{display:none}}
+[id]{scroll-margin-top:92px}
+.tag-venir{font-style:normal;font-size:10px;letter-spacing:0.24em;text-transform:uppercase;color:var(--gris-doux);border:1px solid var(--filet);padding:0.3rem 0.8rem;margin-left:1rem;vertical-align:4px;white-space:nowrap}
+
+/* ---------- héros accueil ---------- */
+header.hero{padding:98px 0 0;text-align:center}
+.h-titre{font-family:var(--serif);font-size:clamp(52px,8vw,104px);letter-spacing:0.1em;text-transform:uppercase;line-height:1.05}
+.h-tagline{font-family:var(--serif);font-size:clamp(17px,2vw,22px);color:var(--gris);margin-top:1.2rem}
+.h-portes{display:flex;justify-content:center;gap:3.5rem;margin-top:2.6rem;font-size:12px;letter-spacing:0.3em;text-transform:uppercase}
+.h-portes a{border-bottom:1px solid var(--encre);padding-bottom:6px;transition:opacity .3s}
+.h-portes a:hover{opacity:0.5}
+.h-image{margin-top:4.5rem;height:74vh;min-height:420px}
+
+/* ---------- descriptif accueil ---------- */
+.descriptif{padding:8rem 0;text-align:center}
+.descriptif p.grand{font-family:var(--serif);font-size:clamp(24px,3.4vw,38px);line-height:1.45;max-width:24em;margin:1.6rem auto 0}
+.descriptif p.petit{max-width:56ch;margin:2rem auto 0;color:var(--gris)}
+.d-cartes{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--filet);margin-top:5rem;text-align:left}
+.d-carte{background:var(--blanc);padding:3rem 2.6rem 2.8rem;transition:background .35s}
+.d-carte:hover{background:var(--voile)}
+.d-carte .num{font-family:var(--serif);font-size:15px;letter-spacing:0.2em;color:var(--gris-doux)}
+.d-carte h3{font-family:var(--serif);font-size:21px;font-weight:400;letter-spacing:0.08em;margin-top:1rem;text-transform:uppercase}
+.d-carte p{color:var(--gris);font-size:14.5px;margin-top:0.9rem}
+.d-carte .lien{display:inline-block;margin-top:1.6rem;font-size:11px;letter-spacing:0.3em;text-transform:uppercase;border-bottom:1px solid var(--encre);padding-bottom:5px;transition:opacity .3s}
+.d-carte .lien:hover{opacity:0.5}
+
+/* ---------- diptyque ---------- */
+.diptyque{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--filet)}
+.porte{background:var(--blanc);padding-bottom:3.5rem}
+.porte .slot{height:58vh;min-height:360px}
+.porte .texte{padding:2.6rem 3rem 0;text-align:center}
+.porte h2{font-family:var(--serif);font-size:26px;letter-spacing:0.22em;text-transform:uppercase;font-weight:400}
+.porte p{color:var(--gris);max-width:44ch;margin:1rem auto 0}
+.porte .lien{display:inline-block;margin-top:1.6rem;font-size:11px;letter-spacing:0.3em;text-transform:uppercase;border-bottom:1px solid var(--encre);padding-bottom:5px;transition:opacity .3s}
+.porte .lien:hover{opacity:0.5}
+
+/* ---------- tuiles chiffrées ---------- */
+.tuiles{display:grid;grid-template-columns:repeat(3,1fr);gap:3rem 2rem;margin-top:3rem;text-align:center}
+.tuile .val{font-family:var(--serif);font-size:clamp(30px,3.6vw,46px);line-height:1}
+.tuile .lab{font-size:11px;letter-spacing:0.25em;text-transform:uppercase;color:var(--gris-doux);margin-top:0.9rem;line-height:1.9}
+.chiffres{padding:8rem 0;border-top:1px solid var(--filet)}
+.chiffres .tuiles{grid-template-columns:repeat(4,1fr)}
+
+/* ---------- méthodologie ---------- */
+.m-hero{padding:5rem 0 4rem;text-align:center}
+.m-hero h1{font-family:var(--serif);font-size:clamp(32px,5vw,56px);font-weight:400;letter-spacing:0.12em;text-transform:uppercase;margin-top:1.2rem}
+.m-hero p{color:var(--gris);max-width:58ch;margin:1.6rem auto 0}
+.m-bloc{padding:5.5rem 0;border-top:1px solid var(--filet)}
+.m-bloc .entete{display:grid;grid-template-columns:120px 1fr;gap:3rem;align-items:baseline}
+.m-bloc .rom{font-family:var(--serif);font-size:34px;color:var(--gris-doux)}
+.m-bloc h2{font-family:var(--serif);font-size:clamp(22px,2.6vw,30px);font-weight:400;letter-spacing:0.06em}
+.m-bloc .corps{max-width:62ch;color:var(--gris);margin:1.4rem 0 0 calc(120px + 3rem)}
+.m-bloc .tuiles{margin-left:calc(120px + 3rem);text-align:left;margin-top:3.2rem}
+.m-image-bandeau{height:52vh;min-height:340px;margin-top:4rem}
+.m-duo{display:grid;grid-template-columns:1fr 1.1fr;gap:4rem;align-items:center;margin-top:3rem;margin-left:calc(120px + 3rem)}
+.m-duo .slot{height:56vh;min-height:380px}
+
+/* ---------- page analyse : configurateur ---------- */
+.a-hero{padding:5rem 0 3.5rem;text-align:center}
+.a-hero h1{font-family:var(--serif);font-size:clamp(32px,5vw,56px);font-weight:400;letter-spacing:0.12em;text-transform:uppercase;margin-top:1.2rem}
+.a-hero p{color:var(--gris);max-width:54ch;margin:1.6rem auto 0}
+.config{max-width:760px;margin:2.5rem auto 0;border:1px solid var(--filet);padding:3.2rem 3.4rem 3.4rem;background:var(--blanc)}
+.champ{margin-bottom:2.1rem}
+.champ label{display:block;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:var(--gris-doux);margin-bottom:0.7rem}
+.champ input,.champ select{width:100%;border:none;border-bottom:1px solid var(--filet);background:transparent;font-family:var(--sans);font-weight:300;font-size:17px;color:var(--encre);padding:0.5rem 0;transition:border-color .3s;border-radius:0}
+.champ input:focus,.champ select:focus{outline:none;border-bottom-color:var(--encre)}
+.champ-ligne{display:grid;grid-template-columns:1fr 1fr;gap:2.4rem}
+.obs{font-size:13px;letter-spacing:0.06em;margin-top:0.4rem;color:var(--gris)}
+.obs.faible{color:var(--vente)}
+.obs.moyen{color:#8A6D1F}
+.commande-bloc{margin-top:2.4rem;border:1px solid var(--filet);background:var(--voile);padding:1.3rem 1.6rem;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:14px;letter-spacing:0.02em;overflow-x:auto;white-space:nowrap;user-select:all}
+.btn-encre{display:block;width:100%;margin-top:2.4rem;padding:1.15rem;background:var(--encre);color:var(--blanc);border:1px solid var(--encre);font-size:12px;letter-spacing:0.32em;text-transform:uppercase;transition:opacity .3s}
+.btn-encre:hover{opacity:0.85}
+.resultats{max-width:980px;margin:5rem auto 0;display:none}
+.resultats.visible{display:block}
+.resultats .cartouche{text-align:center}
+.resultats .verdict{font-family:var(--serif);font-size:clamp(24px,3vw,34px);margin-top:1.2rem}
+.resultats .tuiles{grid-template-columns:repeat(3,1fr);margin-top:3.6rem}
+.mention-demo{text-align:center;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--gris-doux);margin-top:3rem}
+
+/* ---------- page signaux ---------- */
+.s-controles{display:flex;justify-content:center;gap:2.4rem;flex-wrap:wrap;margin-top:2.6rem}
+.s-controles .champ{margin:0;min-width:210px}
+.direct{display:inline-flex;align-items:center;gap:0.7rem;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:var(--gris);margin-top:2.8rem}
+.pastille{width:7px;height:7px;border-radius:50%;background:var(--achat);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.25}}
+@media (prefers-reduced-motion: reduce){.pastille{animation:none}}
+.s-table-wrap{max-width:1050px;margin:2.2rem auto 0;overflow-x:auto}
+table.signaux{width:100%;border-collapse:collapse;font-size:14px}
+table.signaux th{font-size:10.5px;letter-spacing:0.24em;text-transform:uppercase;color:var(--gris-doux);font-weight:400;text-align:left;padding:1rem 1.2rem;border-bottom:1px solid var(--encre)}
+table.signaux td{padding:1.05rem 1.2rem;border-bottom:1px solid var(--filet);white-space:nowrap}
+table.signaux tr:hover td{background:var(--voile)}
+.badge{display:inline-block;font-size:10.5px;letter-spacing:0.22em;text-transform:uppercase;padding:0.35rem 0.9rem;border:1px solid currentColor}
+.badge.achat{color:var(--achat)}
+.badge.vente{color:var(--vente)}
+.badge.neutre{color:var(--gris-doux)}
+.barre{display:inline-block;height:3px;background:var(--encre);vertical-align:middle}
+.s-note{text-align:center;font-size:12px;color:var(--gris-doux);max-width:64ch;margin:3.5rem auto 0}
+
+/* ---------- accès / pied ---------- */
+.acces{padding:8rem 0;text-align:center;border-top:1px solid var(--filet)}
+.acces h2{font-family:var(--serif);font-size:clamp(26px,3vw,36px);font-weight:400;margin-top:1.4rem}
+.acces p{color:var(--gris);max-width:52ch;margin:1.4rem auto 0}
+.commande{display:inline-block;margin-top:2.6rem;padding:1.1rem 2.4rem;border:1px solid var(--encre);font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:15px;letter-spacing:0.04em;user-select:all}
+.acces .note{font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--gris-doux);margin-top:1.2rem}
+footer{border-top:1px solid var(--filet);padding:4.5rem 0 3rem;text-align:center}
+.f-marque{font-family:var(--serif);font-size:19px;letter-spacing:0.3em;text-transform:uppercase}
+.f-liens{display:flex;justify-content:center;gap:2.4rem;margin-top:1.8rem;font-size:11px;letter-spacing:0.22em;text-transform:uppercase}
+.f-liens a:hover{opacity:0.5}
+.f-mention{margin-top:2.4rem;font-size:12px;color:var(--gris-doux)}
+
+/* ---------- responsive ---------- */
+@media (max-width:900px){
+  .nav-g,.nav-d{gap:1.2rem;font-size:10px}
+  .marque{padding:0 0.8rem;font-size:16px}
+  .d-cartes{grid-template-columns:1fr}
+  .diptyque{grid-template-columns:1fr}
+  .tuiles{grid-template-columns:1fr 1fr !important;gap:2.6rem 1.4rem}
+  .m-bloc .entete{grid-template-columns:1fr;gap:0.4rem}
+  .m-bloc .corps,.m-bloc .tuiles,.m-duo{margin-left:0}
+  .m-duo{grid-template-columns:1fr;gap:2.4rem}
+  .champ-ligne{grid-template-columns:1fr}
+  .config{padding:2.2rem 1.6rem}
+  .h-image{height:52vh}
+}
+</style>
+</head>
+<body>
+
+<!-- Configuration des routes : brancher ici les vraies pages / API le moment venu -->
+<script>
+const ROUTES = {
+  api_analyse: "/api/v1/analyses",   // null => mode Démonstration
+  api_signaux: "/api/v1/signaux",    // null => générateur pédagogique
+  documentation: null
+};
+</script>
+
+<nav aria-label="Navigation principale">
+  <div class="nav-in">
+    <div class="nav-g">
+      <div class="nav-item">
+        <a href="#" data-nav="analyse" data-route="analyse" aria-haspopup="true">Analyse</a>
+        <div class="mega" aria-label="Cadres et modèles d'analyse">
+          <div class="mega-in">
+            <div class="mega-col">
+              <p class="mega-titre">Séries temporelles</p>
+              <a href="#" data-nav="analyse" data-module="univarie">Pipeline univarié<span class="detail">ARIMA · GARCH · VaR / TVaR · Backtesting</span></a>
+              <a href="#" data-nav="analyse" data-module="var">Multivarié<span class="detail">VAR · Granger · IRF · FEVD</span></a>
+              <a href="#" data-nav="analyse" data-module="ruptures">Ruptures structurelles<span class="detail">ICSS · Zivot-Andrews</span></a>
+            </div>
+            <div class="mega-col">
+              <p class="mega-titre">Données de panel <em>À venir</em></p>
+              <span class="mega-off">Effets fixes &amp; aléatoires<span class="detail">Within · GLS</span></span>
+              <span class="mega-off">Test de Hausman<span class="detail">Spécification FE / RE</span></span>
+              <span class="mega-off">GMM — Arellano-Bond<span class="detail">Panel dynamique</span></span>
+            </div>
+            <div class="mega-col">
+              <p class="mega-titre">Modèles experts <em>À venir</em></p>
+              <span class="mega-off">Markov-Switching<span class="detail">Régimes de volatilité</span></span>
+              <span class="mega-off">DCC-GARCH<span class="detail">Corrélations dynamiques</span></span>
+              <span class="mega-off">Copules<span class="detail">Dépendances de queue</span></span>
+              <span class="mega-off">HAR-RV<span class="detail">Volatilité réalisée</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <a href="#" data-nav="signaux" data-route="signaux">Signaux</a>
+    </div>
+    <a class="marque" href="#" data-nav="accueil">tickerlab</a>
+    <div class="nav-d">
+      <div class="nav-item">
+        <a href="#" data-nav="methodologie" data-route="methodologie" aria-haspopup="true">Méthodologie</a>
+        <div class="mega" aria-label="Sommaire de la méthodologie">
+          <div class="mega-in">
+            <div class="mega-col">
+              <p class="mega-titre">Séries temporelles</p>
+              <a href="#" data-nav="methodologie" data-scroll="meth-identification">Identification<span class="detail">Box-Jenkins · ADF · corrélogrammes</span></a>
+              <a href="#" data-nav="methodologie" data-scroll="meth-garch">Volatilité<span class="detail">La famille GARCH · sélection hiérarchique</span></a>
+              <a href="#" data-nav="methodologie" data-scroll="meth-risque">Risque<span class="detail">VaR · TVaR · FHS</span></a>
+              <a href="#" data-nav="methodologie" data-scroll="meth-validation">Validation<span class="detail">La batterie Bâle IV</span></a>
+              <a href="#" data-nav="methodologie" data-scroll="meth-var">Multivarié<span class="detail">VAR · Granger · IRF · FEVD</span></a>
+            </div>
+            <div class="mega-col">
+              <p class="mega-titre">Autres approches</p>
+              <a href="#" data-nav="methodologie" data-scroll="meth-panel">Données de panel<span class="detail">Rédaction à venir</span></a>
+              <a href="#" data-nav="methodologie" data-scroll="meth-experts">Modèles experts<span class="detail">Markov-Switching · DCC · Copules · HAR-RV</span></a>
+              <a href="#" data-nav="methodologie" data-scroll="meth-atelier">L'atelier des sorties<span class="detail">Fidélité EViews · rapports</span></a>
+            </div>
+            <div class="mega-col">
+              <p class="mega-titre">Signaux</p>
+              <a href="#" data-nav="methodologie" data-scroll="meth-signaux">La lecture des signaux<span class="detail">Construction &amp; seuils — rédaction à venir</span></a>
+              <a href="#" data-nav="signaux">Le tableau des positions<span class="detail">Consulter en direct</span></a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <a href="#" data-nav="accueil" data-scroll="acces" data-route="acces">Accès</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ==================== PAGE ACCUEIL ==================== -->
+<main class="page" id="page-accueil">
+  <header class="hero">
+    <div class="wrap">
+      <h1 class="h-titre reveal">Tickerlab</h1>
+      <p class="h-tagline reveal">L'économétrie financière, élevée au rang d'art</p>
+      <div class="h-portes reveal">
+        <a href="#" data-nav="analyse">Analyse</a>
+        <a href="#" data-nav="signaux">Signaux</a>
+      </div>
+    </div>
+    <figure class="slot h-image reveal">
+      <div class="cadre"></div>
+      <img src="images/image-I-heros.png" alt="Statue grecque en marbre blanc dans une galerie baignée de lumière">
+    </figure>
+  </header>
+
+  <section class="descriptif">
+    <div class="wrap">
+      <p class="eyebrow reveal">Ce que vous trouverez ici</p>
+      <p class="grand serif reveal">Une plateforme d'économétrie financière complète, gratuite, fidèle aux conventions académiques.</p>
+      <p class="petit reveal">tickerlab réunit en un même lieu l'estimation de modèles de séries temporelles, la mesure du risque de marché et sa validation réglementaire. Pensée pour les étudiants et les chercheurs, elle restitue des sorties au format EViews et des rapports rédigés en français académique.</p>
+      <div class="d-cartes">
+        <article class="d-carte reveal">
+          <span class="num">I</span>
+          <h3>Analyse</h3>
+          <p>Composez une étude complète : identification ARIMA, cinq variantes GARCH croisées avec quatre distributions, VaR et TVaR, backtesting Bâle IV. Une commande, un rapport.</p>
+          <a class="lien" href="#" data-nav="analyse">Lancer une analyse</a>
+        </article>
+        <article class="d-carte reveal">
+          <span class="num">II</span>
+          <h3>Signaux</h3>
+          <p>La lecture des marchés en continu : signaux d'achat et de vente sur la période de votre choix, fondés sur la volatilité conditionnelle des modèles retenus.</p>
+          <a class="lien" href="#" data-nav="signaux">Consulter les signaux</a>
+        </article>
+        <article class="d-carte reveal">
+          <span class="num">III</span>
+          <h3>Méthodologie</h3>
+          <p>Chaque méthode expliquée et chiffrée : les quatre temps du pipeline univarié, le module multivarié VAR, et la fidélité des sorties à la convention EViews.</p>
+          <a class="lien" href="#" data-nav="methodologie">Lire la méthodologie</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="diptyque">
+    <article class="porte">
+      <figure class="slot reveal">
+        <div class="cadre"></div>
+        <img src="images/image-II-analyse.png" alt="Courbe de volatilité gravée sur papier ivoire, compas en acier">
+      </figure>
+      <div class="texte reveal">
+        <h2>Analyse</h2>
+        <p>Le pipeline univarié complet — de l'identification Box-Jenkins au backtesting réglementaire.</p>
+        <a class="lien" href="#" data-nav="analyse">Nouvelle analyse</a>
+      </div>
+    </article>
+    <article class="porte">
+      <figure class="slot reveal">
+        <div class="cadre"></div>
+        <img src="images/image-III-signaux.png" alt="Colonnade de marbre clair, jeu d'ombres géométriques">
+      </figure>
+      <div class="texte reveal">
+        <h2>Signaux</h2>
+        <p>Tableau en direct des positions suggérées par les modèles, sur la période de votre choix.</p>
+        <a class="lien" href="#" data-nav="signaux">Voir le tableau</a>
+      </div>
+    </article>
+  </section>
+
+  <section class="chiffres">
+    <div class="wrap">
+      <p class="eyebrow reveal" style="text-align:center">La précision, en quatre faits</p>
+      <div class="tuiles">
+        <div class="tuile reveal"><div class="val serif">5 × 4</div><div class="lab">Variantes GARCH<br>× distributions</div></div>
+        <div class="tuile reveal"><div class="val serif">6</div><div class="lab">Tests de backtesting<br>niveau Bâle IV</div></div>
+        <div class="tuile reveal"><div class="val serif">0,951</div><div class="lab">Persistance α + β<br>Brent, 2006 – 2024</div></div>
+        <div class="tuile reveal"><div class="val serif">0,72 %</div><div class="lab">Taux d'exception<br>VaR 99 %</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="acces" id="acces">
+    <div class="wrap reveal">
+      <p class="eyebrow">Accès</p>
+      <h2>Une ligne suffit.</h2>
+      <p>Installation par pip, interface en ligne de commande, configurateur web. Gratuit pour les étudiants et les chercheurs, aujourd'hui et demain.</p>
+      <div class="commande">pip install tickerlab</div>
+      <p class="note">Python 3 · Licence libre · Documentation en français</p>
+    </div>
+  </section>
+</main>
+
+<!-- ==================== PAGE MÉTHODOLOGIE ==================== -->
+<main class="page" id="page-methodologie">
+  <section class="m-hero">
+    <div class="wrap">
+      <p class="eyebrow reveal">Méthodologie</p>
+      <h1 class="reveal">La méthode</h1>
+      <p class="reveal">Quatre temps hérités de la tradition économétrique, un module multivarié, et une exigence constante : chaque chiffre doit pouvoir être retracé jusqu'à la formule qui l'a produit.</p>
+    </div>
+    <figure class="slot m-image-bandeau reveal">
+      <div class="cadre"></div>
+      <img src="images/image-IV-methode.png" alt="Main de statue en marbre tenant un stylet, lumière latérale">
+    </figure>
+  </section>
+
+  <section class="m-bloc" id="meth-identification">
+    <div class="wrap">
+      <div class="entete reveal"><span class="rom">I</span><h2>Identification — Box-Jenkins</h2></div>
+      <p class="corps reveal">La série est d'abord soumise aux tests de stationnarité, puis les ordres ARIMA sont sélectionnés par lecture des corrélogrammes et minimisation des critères d'information, normalisés à la convention EViews pour une comparabilité parfaite avec la littérature.</p>
+      <div class="tuiles">
+        <div class="tuile reveal"><div class="val serif">ADF</div><div class="lab">Test de racine unitaire<br>Dickey-Fuller augmenté</div></div>
+        <div class="tuile reveal"><div class="val serif">AIC / n</div><div class="lab">Critères d'information<br>normalisés EViews</div></div>
+        <div class="tuile reveal"><div class="val serif">Q-stat</div><div class="lab">Ljung-Box<br>sur les résidus</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="m-bloc" id="meth-garch">
+    <div class="wrap">
+      <div class="entete reveal"><span class="rom">II</span><h2>Volatilité — la famille GARCH</h2></div>
+      <p class="corps reveal">Cinq variantes — GJR, EGARCH, TGARCH, APARCH, FIGARCH — sont estimées et croisées avec quatre distributions d'erreurs. La sélection est hiérarchique : l'AIC prime, la fenêtre de Burnham-Anderson garde la parcimonie, et le test de signe d'Engle-Ng dispose d'un droit de veto sur les candidats asymétriques mal spécifiés.</p>
+      <div class="tuiles">
+        <div class="tuile reveal"><div class="val serif">5</div><div class="lab">Variantes GARCH<br>estimées</div></div>
+        <div class="tuile reveal"><div class="val serif">4</div><div class="lab">Distributions<br>d'erreurs</div></div>
+        <div class="tuile reveal"><div class="val serif">0,951</div><div class="lab">Persistance α + β<br>Brent, 2006 – 2024</div></div>
+        <div class="tuile reveal"><div class="val serif">ΔAIC &lt; 4</div><div class="lab">Fenêtre de parcimonie<br>Burnham-Anderson</div></div>
+        <div class="tuile reveal"><div class="val serif">Engle-Ng</div><div class="lab">Veto sur les effets<br>de signe résiduels</div></div>
+        <div class="tuile reveal"><div class="val serif">ICSS</div><div class="lab">Ruptures structurelles<br>dans la variance</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="m-bloc" id="meth-risque">
+    <div class="wrap">
+      <div class="entete reveal"><span class="rom">III</span><h2>Risque — VaR et TVaR</h2></div>
+      <p class="corps reveal">Les quantiles conditionnels sont dérivés du modèle retenu, à horizon et seuils paramétrables. La TVaR complète la VaR en mesurant la profondeur des pertes au-delà du seuil — le ratio des deux renseigne sur l'épaisseur de la queue de distribution.</p>
+      <div class="tuiles">
+        <div class="tuile reveal"><div class="val serif">99 %</div><div class="lab">Seuil de confiance<br>réglementaire</div></div>
+        <div class="tuile reveal"><div class="val serif">1,406</div><div class="lab">Ratio TVaR / VaR<br>épaisseur de queue</div></div>
+        <div class="tuile reveal"><div class="val serif">FHS</div><div class="lab">Bootstrap filtré<br>Barone-Adesi (1999)</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="m-bloc" id="meth-validation">
+    <div class="wrap">
+      <div class="entete reveal"><span class="rom">IV</span><h2>Validation — backtesting Bâle IV</h2></div>
+      <p class="corps reveal">Six tests forment la batterie de validation : couverture non conditionnelle de Kupiec, indépendance de Christoffersen, Dynamic Quantile, Acerbi-Székely pour la TVaR, Fissler-Ziegel, et le PIT de Berkowitz sur la densité entière. Aucun raccourci.</p>
+      <div class="tuiles">
+        <div class="tuile reveal"><div class="val serif">6</div><div class="lab">Tests<br>de validation</div></div>
+        <div class="tuile reveal"><div class="val serif">4,41 %</div><div class="lab">Taux d'exception<br>VaR 95 %</div></div>
+        <div class="tuile reveal"><div class="val serif">0,72 %</div><div class="lab">Taux d'exception<br>VaR 99 %</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="m-bloc" id="meth-var">
+    <div class="wrap">
+      <div class="entete reveal"><span class="rom">V</span><h2>Multivarié — le module VAR</h2></div>
+      <p class="corps reveal">Au-delà de l'univarié, le module VAR lit les dépendances entre marchés : causalité de Granger par tests joints, fonctions de réponse impulsionnelle orthogonalisées, décomposition de la variance des erreurs de prévision. Chaque procédure est validée sur des processus générateurs de données connus avant d'atteindre vos séries.</p>
+      <div class="m-duo">
+        <figure class="slot reveal">
+          <div class="cadre"></div>
+          <img src="images/image-V-atelier.png" alt="Deux bustes de marbre se faisant face dans une salle claire">
+        </figure>
+        <div class="tuiles" style="grid-template-columns:1fr;margin:0;gap:2.4rem">
+          <div class="tuile reveal" style="text-align:left"><div class="val serif">Granger</div><div class="lab">Causalité<br>par tests joints</div></div>
+          <div class="tuile reveal" style="text-align:left"><div class="val serif">IRF</div><div class="lab">Réponses impulsionnelles<br>orthogonalisées</div></div>
+          <div class="tuile reveal" style="text-align:left"><div class="val serif">FEVD</div><div class="lab">Décomposition<br>de la variance</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="m-bloc" id="meth-atelier">
+    <div class="wrap">
+      <div class="entete reveal"><span class="rom">VI</span><h2>L'atelier des sorties</h2></div>
+      <p class="corps reveal">Chaque estimation restitue la présentation canonique EViews en trois blocs, les libellés exacts des paramètres de distribution, et des pieds de tableau enrichis — R², erreur-type, critère de Hannan-Quinn, statistique de Durbin-Watson. La prose des rapports est académique, en français, prête pour un mémoire ou une publication.</p>
+      <div class="m-duo">
+        <figure class="slot reveal">
+          <div class="cadre"></div>
+          <img src="images/image-VI-multivarie.png" alt="Feuille de résultats tickerlab posée sur une dalle de marbre">
+        </figure>
+        <div class="tuiles" style="grid-template-columns:1fr;margin:0;gap:2.4rem">
+          <div class="tuile reveal" style="text-align:left"><div class="val serif">3 blocs</div><div class="lab">Structure canonique<br>des sorties GARCH</div></div>
+          <div class="tuile reveal" style="text-align:left"><div class="val serif">PDF</div><div class="lab">Rapports en prose<br>académique française</div></div>
+          <div class="tuile reveal" style="text-align:left"><div class="val serif">202</div><div class="lab">Tests automatisés<br>sur le moteur</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="m-bloc" id="meth-signaux">
+    <div class="wrap">
+      <div class="entete reveal"><span class="rom">VII</span><h2>La lecture des signaux <em class="tag-venir">Rédaction à venir</em></h2></div>
+      <p class="corps reveal">Cette section détaillera la construction des signaux d'achat et de vente : volatilité conditionnelle issue du modèle retenu, seuils de déclenchement, mesure de confiance et règles de neutralité.</p>
+    </div>
+  </section>
+
+  <section class="m-bloc" id="meth-panel">
+    <div class="wrap">
+      <div class="entete reveal"><span class="rom">VIII</span><h2>Données de panel <em class="tag-venir">À venir</em></h2></div>
+      <p class="corps reveal">Effets fixes et aléatoires, test de Hausman, GMM d'Arellano-Bond : le module de panel rejoindra la plateforme accompagné de sa méthodologie complète.</p>
+    </div>
+  </section>
+
+  <section class="m-bloc" id="meth-experts">
+    <div class="wrap">
+      <div class="entete reveal"><span class="rom">IX</span><h2>Modèles experts <em class="tag-venir">À venir</em></h2></div>
+      <p class="corps reveal">Markov-Switching, DCC-GARCH, copules et HAR-RV : les modèles avancés seront documentés ici au fur et à mesure de leur intégration au moteur.</p>
+    </div>
+  </section>
+</main>
+
+<!-- ==================== PAGE ANALYSE ==================== -->
+<main class="page" id="page-analyse">
+  <section class="a-hero">
+    <div class="wrap">
+      <p class="eyebrow reveal">Nouvelle analyse</p>
+      <h1 class="reveal">Composer l'étude</h1>
+      <p class="reveal">Choisissez l'actif, la période et la granularité. La commande se compose sous vos yeux ; le pipeline fait le reste.</p>
+    </div>
+  </section>
+  <div class="wrap">
+    <div class="config reveal">
+      <div class="champ">
+        <label for="c-module">Module</label>
+        <select id="c-module">
+          <option value="univarie" selected>Séries temporelles — pipeline univarié</option>
+          <option value="var">Séries temporelles — multivarié (VAR)</option>
+          <option value="ruptures">Ruptures structurelles — ICSS · Zivot-Andrews</option>
+        </select>
+      </div>
+      <div class="champ">
+        <label for="c-actif">Actif — symbole Yahoo Finance</label>
+        <input id="c-actif" type="text" value="BZ=F" spellcheck="false" autocomplete="off">
+      </div>
+      <div class="champ-ligne">
+        <div class="champ">
+          <label for="c-du">Du</label>
+          <input id="c-du" type="date" value="2006-01-02">
+        </div>
+        <div class="champ">
+          <label for="c-au">Au</label>
+          <input id="c-au" type="date" value="2024-12-31">
+        </div>
+      </div>
+      <div class="champ-ligne">
+        <div class="champ">
+          <label for="c-freq">Fréquence</label>
+          <select id="c-freq">
+            <option value="daily" selected>Quotidienne</option>
+            <option value="weekly">Hebdomadaire</option>
+            <option value="monthly">Mensuelle</option>
+          </select>
+        </div>
+        <div class="champ">
+          <label for="c-prix">Type de prix</label>
+          <select id="c-prix">
+            <option value="adj_close" selected>Clôture ajustée</option>
+            <option value="close">Clôture</option>
+          </select>
+        </div>
+      </div>
+      <p class="obs" id="c-obs"></p>
+      <div class="commande-bloc" id="c-commande"></div>
+      <button class="btn-encre" id="c-lancer">Lancer l'analyse</button>
+    </div>
+
+    <section class="resultats" id="resultats" aria-live="polite">
+      <div class="cartouche">
+        <p class="eyebrow">Résultats de l'estimation</p>
+        <p class="verdict serif" id="r-verdict"></p>
+      </div>
+      <div class="tuiles">
+        <div class="tuile"><div class="val serif" id="r-modele">—</div><div class="lab">Modèle retenu<br>sélection hiérarchique</div></div>
+        <div class="tuile"><div class="val serif" id="r-dist">—</div><div class="lab">Distribution<br>des erreurs</div></div>
+        <div class="tuile"><div class="val serif" id="r-pers">—</div><div class="lab">Persistance<br>α + β</div></div>
+        <div class="tuile"><div class="val serif" id="r-var">—</div><div class="lab">Taux d'exception<br>VaR 99 %</div></div>
+        <div class="tuile"><div class="val serif" id="r-tvar">—</div><div class="lab">Ratio<br>TVaR / VaR</div></div>
+        <div class="tuile"><div class="val serif" id="r-tests">—</div><div class="lab">Backtesting<br>Bâle IV</div></div>
+      </div>
+      <p class="mention-demo" id="r-mention">Démonstration — chiffres issus de l'étude Brent 2006 – 2024. La version connectée exécutera le pipeline réel (voir ROUTES).</p>
+    </section>
+  </div>
+</main>
+
+<!-- ==================== PAGE SIGNAUX ==================== -->
+<main class="page" id="page-signaux">
+  <section class="a-hero">
+    <div class="wrap">
+      <p class="eyebrow reveal">Signaux</p>
+      <h1 class="reveal">Le tableau des positions</h1>
+      <p class="reveal">Lectures d'achat et de vente dérivées de la volatilité conditionnelle des modèles retenus, sur la période de votre choix.</p>
+      <div class="s-controles reveal">
+        <div class="champ">
+          <label for="s-actif">Actif</label>
+          <select id="s-actif">
+            <option value="BZ=F" selected>Brent — BZ=F</option>
+            <option value="CL=F">WTI — CL=F</option>
+            <option value="GC=F">Or — GC=F</option>
+            <option value="EURUSD=X">EUR / USD</option>
+          </select>
+        </div>
+        <div class="champ">
+          <label for="s-periode">Période</label>
+          <select id="s-periode">
+            <option value="7">7 derniers jours</option>
+            <option value="30" selected>30 derniers jours</option>
+            <option value="90">90 derniers jours</option>
+          </select>
+        </div>
+      </div>
+      <div class="direct"><span class="pastille" aria-hidden="true"></span><span id="s-horodatage">En direct</span></div>
+    </div>
+  </section>
+  <div class="s-table-wrap">
+    <table class="signaux" aria-describedby="s-note">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Signal</th>
+          <th>σ conditionnelle</th>
+          <th>VaR 99 %</th>
+          <th>Confiance</th>
+        </tr>
+      </thead>
+      <tbody id="s-corps"></tbody>
+    </table>
+  </div>
+  <p class="s-note" id="s-note">Démonstration à des fins pédagogiques — données simulées, dans l'attente du branchement au moteur (voir ROUTES). Ces signaux ne constituent en aucun cas un conseil en investissement.</p>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="f-marque">tickerlab</p>
+    <div class="f-liens">
+      <a href="#" data-nav="analyse">Analyse</a>
+      <a href="#" data-nav="signaux">Signaux</a>
+      <a href="#" data-nav="methodologie">Méthodologie</a>
+      <a href="#" data-nav="accueil" data-scroll="acces">Accès</a>
+    </div>
+    <p class="f-mention">tickerlab — plateforme d'économétrie financière. Conçue à Montpellier.</p>
+  </div>
+</footer>
+
+<script>
+/* ---------- révélations au scroll ---------- */
+(function(){
+  var reduits = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var els = document.querySelectorAll('.reveal');
+  if (reduits || !('IntersectionObserver' in window)) {
+    els.forEach(function(e){ e.classList.add('vu'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (en.isIntersecting) { en.target.classList.add('vu'); obs.unobserve(en.target); }
+    });
+  }, { threshold: 0.1 });
+  els.forEach(function(e){ obs.observe(e); });
+})();
+
+/* ---------- routeur (navigation JS pure, compatible aperçus sandboxés) ---------- */
+(function(){
+  var pages = ['accueil','methodologie','analyse','signaux'];
+  function afficher(nom, cibleId){
+    if (pages.indexOf(nom) === -1) nom = 'accueil';
+    pages.forEach(function(p){
+      document.getElementById('page-'+p).classList.toggle('active', p === nom);
+    });
+    var routeActive = (cibleId === 'acces') ? 'acces' : nom;
+    document.querySelectorAll('nav a[data-route]').forEach(function(a){
+      a.classList.toggle('actif', a.getAttribute('data-route') === routeActive);
+    });
+    var cible = cibleId ? document.getElementById(cibleId) : null;
+    if (cible) { cible.scrollIntoView(); } else { window.scrollTo(0, 0); }
+    if (nom === 'signaux') construireSignaux();
+    try { history.replaceState(null, '', '#/' + nom + (cibleId ? '?' + cibleId : '')); } catch (e) {}
+  }
+  document.addEventListener('click', function(e){
+    var a = e.target.closest ? e.target.closest('a[data-nav]') : null;
+    if (!a) return;
+    e.preventDefault();
+    afficher(a.getAttribute('data-nav'), a.getAttribute('data-scroll'));
+    var mod = a.getAttribute('data-module');
+    if (mod) {
+      var sel = document.getElementById('c-module');
+      if (sel) { sel.value = mod; sel.dispatchEvent(new Event('change')); }
+    }
+  });
+  window.addEventListener('hashchange', function(){
+    var h = location.hash.replace('#/','');
+    if (h) afficher(h.split('?')[0], h.split('?')[1] || null);
+  });
+  var h0 = location.hash.replace('#/','');
+  afficher(h0 ? h0.split('?')[0] : 'accueil', h0.split('?')[1] || null);
+})();
+
+/* ---------- configurateur d'analyse ---------- */
+(function(){
+  var actif = document.getElementById('c-actif'),
+      du = document.getElementById('c-du'),
+      au = document.getElementById('c-au'),
+      freq = document.getElementById('c-freq'),
+      prix = document.getElementById('c-prix'),
+      module_ = document.getElementById('c-module'),
+      obs = document.getElementById('c-obs'),
+      cmd = document.getElementById('c-commande');
+
+  function estimerObs(){
+    var d1 = new Date(du.value), d2 = new Date(au.value);
+    if (isNaN(d1) || isNaN(d2) || d2 <= d1) return 0;
+    var jours = (d2 - d1) / 86400000;
+    if (freq.value === 'daily')   return Math.round(jours * 252 / 365);
+    if (freq.value === 'weekly')  return Math.round(jours / 7);
+    return Math.round(jours / 30.44);
+  }
+
+  function maj(){
+    var n = estimerObs();
+    obs.classList.remove('faible','moyen');
+    if (n <= 0) {
+      obs.textContent = 'Période invalide — la date de fin doit suivre la date de début.';
+      obs.classList.add('faible');
+    } else if (n < 250) {
+      obs.textContent = '≈ ' + n.toLocaleString('fr-FR') + ' observations — série trop courte pour une estimation GARCH fiable.';
+      obs.classList.add('faible');
+    } else if (n < 500) {
+      obs.textContent = '≈ ' + n.toLocaleString('fr-FR') + ' observations — estimation possible mais fragile ; élargissez la période si vous le pouvez.';
+      obs.classList.add('moyen');
+    } else {
+      obs.textContent = '≈ ' + n.toLocaleString('fr-FR') + ' observations — profondeur suffisante.';
+    }
+    var symbole = (actif.value || 'BZ=F').trim();
+    cmd.textContent = 'tickerlab run ' + symbole +
+      ' --module ' + module_.value +
+      ' --from ' + du.value + ' --to ' + au.value +
+      ' --freq ' + freq.value + ' --price ' + prix.value;
+  }
+
+  [actif,du,au,freq,prix,module_].forEach(function(el){
+    el.addEventListener('input', maj);
+    el.addEventListener('change', maj);
+  });
+  maj();
+
+  /* ---------- lancement : API v1 réelle, ou démonstration si ROUTES.api_analyse=null ---------- */
+  var POLL_MS = 1500, pollTimer = null;
+
+  function virgule(x, d){ return Number(x).toFixed(d).replace('.', ','); }
+  function tuiles(v){
+    ['modele','dist','pers','var','tvar','tests'].forEach(function(k, i){
+      document.getElementById('r-' + k).textContent = v[i];
+    });
+  }
+  function cartouche(txt){ document.getElementById('r-verdict').textContent = txt; }
+  function mention(txt){ document.getElementById('r-mention').textContent = txt; }
+  function montrer(){
+    var r = document.getElementById('resultats');
+    r.classList.add('visible');
+    r.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+  function retirerPdf(){ var b = document.getElementById('r-pdf'); if (b) b.remove(); }
+  function boutonPdf(url){
+    retirerPdf();
+    var a = document.createElement('a');
+    a.id = 'r-pdf'; a.href = url; a.textContent = 'Télécharger le rapport (PDF)';
+    a.className = 'btn-encre';
+    a.style.cssText = 'display:inline-block;width:auto;padding:1rem 2.6rem;text-align:center;margin:2.6rem auto 0';
+    var cart = document.querySelector('#resultats .cartouche');
+    cart.appendChild(a);
+  }
+  function erreurCartouche(msg){
+    tuiles(['—','—','—','—','—','—']);
+    cartouche('L\u2019analyse n\u2019a pas pu aboutir.');
+    mention(msg);
+    retirerPdf(); montrer();
+  }
+  function erreurApi(body){
+    var code = (body && body.code) || '';
+    var msg = (body && (body.message || body.detail)) || 'Requête refusée par le serveur.';
+    if (typeof msg !== 'string') msg = JSON.stringify(msg);
+    if (code === 'SERIE_TROP_COURTE') {
+      obs.textContent = 'Série trop courte — ' + msg;
+      obs.classList.remove('moyen'); obs.classList.add('faible');
+    }
+    erreurCartouche(msg);
+  }
+  function demo(){
+    cartouche('EGARCH(1,1) retenu — modèle validé par la batterie complète.');
+    tuiles(['EGARCH(1,1)','Student-t','0,951','0,72 %','1,406','6 / 6']);
+    mention('Démonstration — chiffres issus de l\u2019étude Brent 2006 – 2024. Lancez « tickerlab serve » pour exécuter le pipeline réel.');
+    retirerPdf(); montrer();
+  }
+  function remplir(id, res){
+    var bt = res.backtesting || {};
+    cartouche((res.modele_retenu || 'Modèle') + ' retenu — ' +
+      (bt.valides != null ? bt.valides : '?') + ' / ' + (bt.total != null ? bt.total : 6) +
+      ' tests de backtesting validés.');
+    tuiles([
+      res.modele_retenu || '—',
+      res.distribution || '—',
+      res.persistance != null ? virgule(res.persistance, 3) : '—',
+      res.taux_exception_var99 != null ? virgule(res.taux_exception_var99 * 100, 2) + ' %' : '—',
+      res.ratio_tvar_var != null ? virgule(res.ratio_tvar_var, 3) : '—',
+      (bt.valides != null ? bt.valides : '—') + ' / ' + (bt.total != null ? bt.total : 6)
+    ]);
+    mention('Analyse réelle' + (res.n_observations ? ' — ' + Number(res.n_observations).toLocaleString('fr-FR') + ' observations.' : '.'));
+    if (res.rapport_pdf_url) boutonPdf(res.rapport_pdf_url);
+  }
+  function sonder(id){
+    fetch(ROUTES.api_analyse + '/' + id)
+      .then(function(r){ return r.json(); })
+      .then(function(s){
+        var etape = (s.progress && s.progress.etape) || '';
+        var pct = (s.progress && s.progress.pct);      // peut être null : progression non observée
+        if (s.status === 'queued') {
+          cartouche('En file d\u2019attente\u2026');
+          pollTimer = setTimeout(function(){ sonder(id); }, POLL_MS); return;
+        }
+        if (s.status === 'running') {
+          cartouche('Analyse en cours — ' + (etape || 'calcul') +
+            (pct != null ? ' (' + pct + ' %)' : '') +
+            (s.warning === 'SERIE_FRAGILE' ? ' · série fragile' : ''));
+          pollTimer = setTimeout(function(){ sonder(id); }, POLL_MS); return;
+        }
+        if (s.status === 'done') { remplir(id, s.result || {}); return; }
+        if (s.status === 'error') {
+          erreurCartouche((s.error && s.error.message) || 'Une erreur est survenue pendant l\u2019analyse.');
+          return;
+        }
+        pollTimer = setTimeout(function(){ sonder(id); }, POLL_MS);
+      })
+      .catch(function(){ pollTimer = setTimeout(function(){ sonder(id); }, 2000); });
+  }
+
+  document.getElementById('c-lancer').addEventListener('click', function(){
+    if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+    if (!ROUTES.api_analyse) { demo(); return; }
+    tuiles(['—','—','—','—','—','—']);
+    cartouche('Envoi de la requête\u2026');
+    mention('Analyse réelle en cours d\u2019exécution sur le moteur tickerlab.');
+    retirerPdf(); montrer();
+    var payload = {
+      symbol: (actif.value || 'BZ=F').trim(),
+      module: module_.value,
+      date_from: du.value,
+      date_to: au.value,
+      freq: freq.value,
+      price: prix.value
+    };
+    fetch(ROUTES.api_analyse, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    })
+      .then(function(r){ return r.json().then(function(j){ return {ok: r.ok, body: j}; }); })
+      .then(function(res){
+        if (!res.ok) { erreurApi(res.body); return; }
+        if (res.body.warning === 'SERIE_FRAGILE') {
+          obs.classList.add('moyen');
+        }
+        sonder(res.body.job_id);
+      })
+      .catch(function(){ erreurCartouche('Connexion au serveur impossible. Lancez « tickerlab serve » puis réessayez.'); });
+  });
+})();
+
+/* ---------- tableau des signaux ---------- */
+function construireSignaux(){
+  var actif = document.getElementById('s-actif').value,
+      jours = parseInt(document.getElementById('s-periode').value, 10);
+  if (ROUTES.api_signaux) {
+    fetch(ROUTES.api_signaux + '?symbol=' + encodeURIComponent(actif) + '&days=' + jours)
+      .then(function(r){ if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then(function(d){ rendreSignauxServeur(d); })
+      .catch(function(){ construireSignauxDemo(actif, jours, 'Démonstration — serveur injoignable'); });
+    return;
+  }
+  construireSignauxDemo(actif, jours, 'Démonstration');
+}
+
+function rendreSignauxServeur(d){
+  var corps = document.getElementById('s-corps');
+  var libelles = { achat: 'Achat', vente: 'Vente', neutre: 'Neutre' };
+  corps.innerHTML = (d.lignes || []).slice().reverse().map(function(l){
+    var conf = Math.max(0, Math.min(100, Number(l.confiance_pct) || 0));
+    return '<tr>' +
+      '<td>' + new Date(l.date).toLocaleDateString('fr-FR', {day:'2-digit', month:'short', year:'numeric'}) + '</td>' +
+      '<td><span class="badge ' + l.signal + '">' + (libelles[l.signal] || l.signal) + '</span></td>' +
+      '<td>' + Number(l.sigma_pct).toFixed(2).replace('.', ',') + ' %</td>' +
+      '<td>−' + Number(l.var99_pct).toFixed(2).replace('.', ',') + ' %</td>' +
+      '<td><span class="barre" style="width:' + (conf * 0.7) + 'px"></span>&nbsp; ' + conf + ' %</td>' +
+    '</tr>';
+  }).join('');
+  var q = d.genere_le ? new Date(d.genere_le) : new Date();
+  document.getElementById('s-horodatage').textContent =
+    'En direct — ' + q.toLocaleDateString('fr-FR') + ', ' +
+    q.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) +
+    (d.modele_source ? ' · ' + d.modele_source : '');
+  if (d.avertissement) document.getElementById('s-note').textContent = d.avertissement +
+    ' Données servies par le moteur tickerlab.';
+}
+
+function construireSignauxDemo(actif, jours, etiquette){
+  var corps = document.getElementById('s-corps');
+
+  /* générateur déterministe (mulberry32) semé par actif + période */
+  var graine = 0;
+  for (var i = 0; i < actif.length; i++) graine = (graine * 31 + actif.charCodeAt(i)) >>> 0;
+  graine = (graine + jours * 7919) >>> 0;
+  function alea(){
+    graine |= 0; graine = (graine + 0x6D2B79F5) | 0;
+    var t = Math.imul(graine ^ (graine >>> 15), 1 | graine);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  var bases = { 'BZ=F': 2.1, 'CL=F': 2.3, 'GC=F': 0.9, 'EURUSD=X': 0.55 };
+  var base = bases[actif] || 1.5;
+
+  var lignes = [];
+  var d = new Date();
+  var etat = alea() * 2 - 1;
+  while (lignes.length < jours) {
+    var js = d.getDay();
+    if (js !== 0 && js !== 6) {
+      etat = 0.72 * etat + 0.55 * (alea() * 2 - 1);
+      var m = Math.max(-1, Math.min(1, etat));
+      var sigma = base * (0.75 + 0.6 * alea() + 0.35 * Math.abs(m));
+      var var99 = 2.326 * sigma;
+      var signal = m > 0.32 ? 'achat' : (m < -0.32 ? 'vente' : 'neutre');
+      var conf = Math.round(52 + Math.abs(m) * 43);
+      lignes.push({
+        date: d.toLocaleDateString('fr-FR', {day:'2-digit', month:'short', year:'numeric'}),
+        signal: signal, sigma: sigma, var99: var99, conf: conf
+      });
+    }
+    d.setDate(d.getDate() - 1);
+  }
+
+  var libelles = { achat: 'Achat', vente: 'Vente', neutre: 'Neutre' };
+  corps.innerHTML = lignes.map(function(l){
+    return '<tr>' +
+      '<td>' + l.date + '</td>' +
+      '<td><span class="badge ' + l.signal + '">' + libelles[l.signal] + '</span></td>' +
+      '<td>' + l.sigma.toFixed(2).replace('.', ',') + ' %</td>' +
+      '<td>−' + l.var99.toFixed(2).replace('.', ',') + ' %</td>' +
+      '<td><span class="barre" style="width:' + (l.conf * 0.7) + 'px"></span>&nbsp; ' + l.conf + ' %</td>' +
+    '</tr>';
+  }).join('');
+
+  var maintenant = new Date();
+  document.getElementById('s-horodatage').textContent =
+    etiquette + ' — ' + maintenant.toLocaleDateString('fr-FR') + ', ' +
+    maintenant.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+}
+document.getElementById('s-actif').addEventListener('change', construireSignaux);
+document.getElementById('s-periode').addEventListener('change', construireSignaux);
+</script>
+
+</body>
+</html>

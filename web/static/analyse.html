@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TickerLab — Lancer une analyse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#FFFFFF; --surface:#F7F7F7; --border:#E0E0E0;
+      --text:#0A0A0A; --text2:#3A3A3A; --muted:#888888;
+      --black:#000000; --nav-h:60px; --ok:#1a6e2e; --err:#b00020;
+    }
+    html { scroll-behavior: smooth; }
+    body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; }
+    ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:#ccc}
+
+    /* NAV */
+    nav {
+      position:fixed; top:0; left:0; right:0; z-index:100;
+      height:var(--nav-h); background:var(--bg); border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between; padding:0 48px;
+    }
+    .nav-logo{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--text);text-decoration:none}
+    .nav-links{display:flex;align-items:center;gap:40px}
+    .nav-links a{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .2s}
+    .nav-links a:hover,.nav-links a.active{color:var(--text)}
+
+    /* LAYOUT */
+    .page-wrap{max-width:1240px;margin:0 auto;padding:calc(var(--nav-h)+48px) 48px 80px}
+    .page-header{border-bottom:1px solid var(--border);padding-bottom:28px;margin-bottom:36px}
+    .breadcrumb{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+    .breadcrumb a{color:var(--muted);text-decoration:none}.breadcrumb a:hover{color:var(--text)}
+    .breadcrumb span{margin:0 8px}
+    h1{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:700}
+
+    /* TWO-COLUMN */
+    .form-grid{display:grid;grid-template-columns:370px 1fr;gap:24px;align-items:start}
+
+    /* FORM PANEL */
+    .form-panel{border:1px solid var(--border);margin-bottom:16px}
+    .form-section{padding:22px;border-bottom:1px solid var(--border)}
+    .form-section:last-child{border-bottom:none}
+    .fs-title{
+      font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);
+      margin-bottom:16px;display:flex;align-items:center;gap:8px;
+    }
+    .fs-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+    label{display:block;font-size:.8rem;font-weight:500;color:var(--text2);margin-bottom:5px}
+    input[type=text],input[type=date],select{
+      width:100%;padding:9px 12px;border:1px solid var(--border);background:var(--bg);
+      font-family:'Inter',sans-serif;font-size:.84rem;color:var(--text);
+      outline:none;transition:border-color .2s;appearance:none;
+    }
+    input:focus,select:focus{border-color:var(--black)}
+    .field{margin-bottom:14px}.field:last-child{margin-bottom:0}
+    .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .field-hint{font-size:.7rem;color:var(--muted);margin-top:3px}
+
+    /* Multi-tickers */
+    .tickers-input{position:relative}
+    .tickers-input input{padding-right:72px}
+    .ticker-add{
+      position:absolute;right:0;top:0;bottom:0;padding:0 13px;
+      border:none;border-left:1px solid var(--border);background:var(--surface);
+      font-size:.7rem;font-weight:600;letter-spacing:.05em;cursor:pointer;color:var(--text2);
+    }
+    .ticker-add:hover{background:var(--border)}
+    .ticker-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+    .chip{
+      display:inline-flex;align-items:center;gap:5px;
+      font-family:'DM Mono',monospace;font-size:.73rem;
+      padding:3px 9px;background:var(--surface);border:1px solid var(--border);
+    }
+    .chip button{background:none;border:none;cursor:pointer;color:var(--muted);font-size:.9rem;padding:0}
+    .chip button:hover{color:var(--text)}
+
+    /* Checkboxes */
+    .check-row{
+      display:flex;align-items:flex-start;gap:10px;padding:11px 0;
+      border-bottom:1px solid var(--border);cursor:pointer;
+    }
+    .check-row:last-child{border-bottom:none}
+    .check-row input[type=checkbox]{margin-top:2px;flex-shrink:0;cursor:pointer;width:14px;height:14px}
+    .check-label{font-size:.82rem;font-weight:500}
+    .check-sub{font-size:.7rem;color:var(--muted);margin-top:2px}
+    .check-badge{
+      margin-left:auto;font-size:.57rem;letter-spacing:.1em;text-transform:uppercase;
+      padding:2px 7px;flex-shrink:0;
+    }
+    .cb-live{background:var(--black);color:#fff}
+    .cb-new{border:1px solid var(--black);color:var(--text)}
+    .cb-soon{border:1px dashed var(--border);color:var(--muted)}
+
+    /* Submit */
+    .form-submit{padding:18px 22px}
+    .btn-run{
+      width:100%;padding:13px;background:var(--black);color:#fff;
+      font-size:.78rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+      border:none;cursor:pointer;transition:opacity .2s;
+      display:flex;align-items:center;justify-content:center;gap:10px;
+    }
+    .btn-run:hover:not(:disabled){opacity:.8}
+    .btn-run:disabled{opacity:.35;cursor:not-allowed}
+    .spinner{
+      width:13px;height:13px;border:2px solid #ffffff44;border-top-color:#fff;
+      border-radius:50%;animation:spin .7s linear infinite;display:none;flex-shrink:0;
+    }
+    .btn-run.loading .spinner{display:block}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .api-hint{font-size:.68rem;color:var(--muted);margin-top:8px;text-align:center;font-family:'DM Mono',monospace}
+
+    /* RESULTS PANEL */
+    .results-panel{border:1px solid var(--border);min-height:420px;display:flex;flex-direction:column}
+    .results-header{
+      padding:16px 22px;border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+    }
+    .results-title{font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+    .results-status{font-size:.72rem;font-family:'DM Mono',monospace;color:var(--muted)}
+    .results-body{padding:22px;flex:1;display:flex;flex-direction:column}
+
+    /* Empty */
+    .empty-state{
+      flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      text-align:center;gap:14px;color:var(--muted);min-height:320px;
+    }
+    .empty-state svg{opacity:.2}
+    .empty-state p{font-size:.83rem;max-width:240px;line-height:1.7}
+
+    /* Progress */
+    .progress-wrap{margin-bottom:20px}
+    .prog-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+    .prog-step{font-size:.83rem;font-weight:500;color:var(--text)}
+    .prog-pct{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--muted)}
+    .prog-bar-bg{height:3px;background:var(--border);position:relative;overflow:hidden}
+    .prog-bar-fill{height:100%;background:var(--black);transition:width .5s ease}
+    .prog-bar-fill.animate{animation:shimmer 1.5s linear infinite}
+    @keyframes shimmer{
+      0%{background:linear-gradient(90deg,#000 0%,#555 50%,#000 100%);background-size:200%}
+      100%{background-position:-200%}
+    }
+
+    /* Log */
+    .log-console{
+      background:var(--surface);border:1px solid var(--border);
+      font-family:'DM Mono',monospace;font-size:.7rem;color:var(--text2);
+      padding:10px 12px;max-height:120px;overflow-y:auto;
+      white-space:pre-wrap;line-height:1.6;margin-top:14px;
+    }
+    .log-ok{color:var(--ok)}.log-err{color:var(--err)}
+
+    /* Results */
+    .rs-sep{font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);
+      margin:20px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+    .kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:16px}
+    .kpi-cell{background:var(--bg);padding:14px 12px}
+    .kpi-lbl{font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+    .kpi-val{font-family:'DM Mono',monospace;font-size:.92rem}
+    .kpi-val.neg{color:var(--err)}.kpi-val.pos{color:var(--ok)}
+
+    .fig-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:16px}
+    .fig-cell{background:var(--bg);padding:10px}
+    .fig-cell img{width:100%;display:block;cursor:zoom-in}
+    .fig-cell img:hover{opacity:.9}
+    .fig-title{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+
+    .dl-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+    .dl-btn{
+      display:inline-flex;align-items:center;gap:7px;
+      font-size:.73rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+      padding:9px 16px;text-decoration:none;border:none;cursor:pointer;transition:opacity .2s;
+    }
+    .dl-primary{background:var(--black);color:#fff}.dl-primary:hover{opacity:.8}
+    .dl-ghost{border:1px solid var(--border);color:var(--text2);background:none}.dl-ghost:hover{border-color:var(--text)}
+
+    /* Error */
+    .error-box{
+      border:1px solid #f5cccc;background:#fff8f8;padding:14px 18px;color:var(--err);
+      font-size:.82rem;line-height:1.6;display:flex;gap:10px;align-items:flex-start;
+    }
+    .error-box svg{flex-shrink:0;margin-top:1px}
+
+    /* Config panel */
+    .config-panel{border:1px solid var(--border)}
+    .config-section{padding:18px 22px}
+
+    /* Server status dot */
+    .srv-dot{
+      width:7px;height:7px;border-radius:50%;background:var(--border);
+      display:inline-block;margin-right:5px;vertical-align:middle;
+    }
+    .srv-dot.ok{background:var(--ok);animation:pulse-ok 2s ease-in-out infinite}
+    .srv-dot.err{background:var(--err)}
+    @keyframes pulse-ok{0%,100%{opacity:1}50%{opacity:.4}}
+
+    @media(max-width:960px){
+      nav{padding:0 20px}.nav-links{display:none}
+      .page-wrap{padding-left:16px;padding-right:16px}
+      .form-grid{grid-template-columns:1fr}
+      .field-row{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="landing.html">TickerLab</a>
+  <div class="nav-links">
+    <a href="analyse.html" class="active">Analyse</a>
+    <a href="landing.html#modules">Modules</a>
+    <a href="methodologie.html">Méthodologie</a>
+    <a href="contact.html">Contact</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="landing.html">Accueil</a><span>›</span>Lancer une analyse
+    </div>
+    <h1>Configurer l'analyse</h1>
+  </div>
+
+  <div class="form-grid">
+    <!-- ══ FORMULAIRE ═════════════════════════════════════════════════════ -->
+    <div>
+      <form id="analysis-form">
+        <!-- Actif -->
+        <div class="form-panel">
+          <div class="form-section">
+            <div class="fs-title">Actif principal</div>
+            <div class="field">
+              <label>Ticker Yahoo Finance</label>
+              <input type="text" id="f-ticker" value="BZ=F" placeholder="BZ=F, GC=F, CL=F, ^GSPC…" />
+              <div class="field-hint">Brent: BZ=F · WTI: CL=F · Or: GC=F · S&P: ^GSPC · CAC: ^FCHI</div>
+            </div>
+          </div>
+
+          <!-- Multi-tickers (VAR) -->
+          <div class="form-section" id="mv-section" style="display:none">
+            <div class="fs-title">Actifs additionnels <span style="font-size:.58rem;background:var(--black);color:#fff;padding:1px 7px;letter-spacing:.08em">VAR</span></div>
+            <div class="field">
+              <label>Ajouter des tickers (VAR ≥ 2 actifs)</label>
+              <div class="tickers-input">
+                <input type="text" id="extra-ticker-input" placeholder="ex: CL=F" />
+                <button type="button" class="ticker-add" onclick="addTicker()">+ Ajouter</button>
+              </div>
+              <div class="ticker-chips" id="ticker-chips"></div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="fs-title">Période</div>
+            <div class="field-row">
+              <div class="field">
+                <label>Date de début</label>
+                <input type="date" id="f-from" value="2010-01-01" />
+              </div>
+              <div class="field">
+                <label>Date de fin</label>
+                <input type="date" id="f-to" />
+              </div>
+            </div>
+            <div class="field-row" style="margin-top:10px">
+              <div class="field">
+                <label>Fréquence</label>
+                <select id="f-freq">
+                  <option value="daily" selected>Journalière</option>
+                  <option value="weekly">Hebdomadaire</option>
+                  <option value="monthly">Mensuelle</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Type de prix</label>
+                <select id="f-price">
+                  <option value="adjclose" selected>Ajusté (Adj Close)</option>
+                  <option value="close">Clôture brute (Close)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="fs-title">Options supplémentaires</div>
+            <div style="font-size:.7rem;color:var(--muted);margin-bottom:12px;line-height:1.6;padding:8px 10px;background:var(--surface);border-left:2px solid var(--border)">
+              ARIMA · GARCH · VaR · Backtests sont <strong>toujours calculés</strong>. Cochez les options additionnelles :
+            </div>
+            <label class="check-row">
+              <input type="checkbox" name="outputs" value="breaks" />
+              <div>
+                <div class="check-label">Ruptures structurelles</div>
+                <div class="check-sub">ICSS · Détection régimes de volatilité</div>
+              </div>
+              <span class="check-badge cb-live">Actif</span>
+            </label>
+            <label class="check-row" id="var-mv-row">
+              <input type="checkbox" name="outputs" value="var_multivarie" id="chk-var-mv" onchange="toggleMV()" />
+              <div>
+                <div class="check-label">VAR Multivarié</div>
+                <div class="check-sub">Granger · IRF · FEVD · ≥ 2 actifs requis</div>
+              </div>
+              <span class="check-badge cb-new">Nouveau</span>
+            </label>
+            <label class="check-row">
+              <input type="checkbox" name="outputs" value="report" checked />
+              <div>
+                <div class="check-label">Rapport PDF</div>
+                <div class="check-sub">PDF complet (IA si clé API configurée)</div>
+              </div>
+              <span class="check-badge cb-live">Actif</span>
+            </label>
+          </div>
+
+          <div class="form-submit">
+            <button type="submit" class="btn-run" id="run-btn">
+              <div class="spinner"></div>
+              <span id="btn-txt">Lancer l'analyse</span>
+            </button>
+            <div class="api-hint" id="api-hint">
+              <span class="srv-dot" id="srv-dot"></span>
+              <span id="srv-status">Vérification du serveur…</span>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Config API -->
+      <div class="config-panel">
+        <div class="config-section">
+          <div class="fs-title" style="font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+            Configuration serveur
+            <span style="flex:1;height:1px;background:var(--border);display:block"></span>
+          </div>
+          <div class="field">
+            <label>URL FastAPI</label>
+            <input type="text" id="api-url" value="" placeholder="(vide = même origine que cette page)" />
+            <div class="field-hint">
+              Laissez vide : cette page est servie par le backend, elle s'y connecte
+              automatiquement (même origine). Démarrage du serveur :
+              <code style="font-family:monospace;font-size:.7rem">python -m web.app</code>
+              (défaut <code style="font-family:monospace;font-size:.7rem">127.0.0.1:8742</code>).
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ RÉSULTATS ══════════════════════════════════════════════════════ -->
+    <div class="results-panel">
+      <div class="results-header">
+        <span class="results-title">Résultats</span>
+        <span class="results-status" id="results-status">—</span>
+      </div>
+      <div class="results-body" id="results-body">
+
+        <!-- Vide -->
+        <div class="empty-state" id="empty-state">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          <p>Configurez les paramètres ci-contre et lancez l'analyse. Les résultats apparaîtront ici.</p>
+          <p style="font-size:.72rem;color:var(--border)">Connexion internet requise (yfinance)</p>
+        </div>
+
+        <!-- Progression (caché par défaut) -->
+        <div id="progress-area" style="display:none">
+          <div class="progress-wrap">
+            <div class="prog-header">
+              <span class="prog-step" id="prog-step">Initialisation…</span>
+              <span class="prog-pct" id="prog-pct">0 %</span>
+            </div>
+            <div class="prog-bar-bg">
+              <div class="prog-bar-fill animate" id="prog-fill" style="width:3%"></div>
+            </div>
+          </div>
+          <div class="log-console" id="log-console"></div>
+        </div>
+
+        <!-- Résultats (caché par défaut) -->
+        <div id="result-area" style="display:none"></div>
+
+        <!-- Erreur (caché par défaut) -->
+        <div id="error-area" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── État global ──────────────────────────────────────────────────────────────
+let extraTickers = [];
+let pollTimer = null;
+let apiBase = '';  // vide = même origine (la page est servie par le backend FastAPI)
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+document.getElementById('f-to').value = new Date().toISOString().slice(0, 10);
+document.getElementById('api-url').addEventListener('input', () => {
+  apiBase = document.getElementById('api-url').value.replace(/\/$/, '');
+  checkServer();
+});
+checkServer();
+setInterval(checkServer, 30000);
+
+// ── Vérification serveur ─────────────────────────────────────────────────────
+async function checkServer() {
+  apiBase = document.getElementById('api-url').value.replace(/\/$/, '');
+  const dot = document.getElementById('srv-dot');
+  const txt = document.getElementById('srv-status');
+  try {
+    // La route / renvoie le HTML statique — un 200 suffit
+    const r = await fetch(apiBase + '/', { signal: AbortSignal.timeout(3000) });
+    if (r.ok || r.status === 404) {
+      dot.className = 'srv-dot ok';
+      txt.textContent = (apiBase || location.origin).replace(/^https?:\/\//, '') + ' — serveur actif';
+    } else { throw new Error('non-ok'); }
+  } catch {
+    dot.className = 'srv-dot err';
+    txt.textContent = 'Serveur non joignable — démarrez-le d\'abord';
+  }
+}
+
+// ── Multi-tickers ────────────────────────────────────────────────────────────
+function toggleMV() {
+  document.getElementById('mv-section').style.display =
+    document.getElementById('chk-var-mv').checked ? '' : 'none';
+}
+function addTicker() {
+  const inp = document.getElementById('extra-ticker-input');
+  const val = inp.value.trim().toUpperCase();
+  if (!val || extraTickers.includes(val)) { inp.value = ''; return; }
+  extraTickers.push(val);
+  renderChips();
+  inp.value = '';
+}
+function removeTicker(t) {
+  extraTickers = extraTickers.filter(x => x !== t);
+  renderChips();
+}
+function renderChips() {
+  document.getElementById('ticker-chips').innerHTML = extraTickers.map(t =>
+    `<span class="chip">${t}
+      <button type="button" onclick="removeTicker('${t}')">×</button>
+    </span>`).join('');
+}
+document.getElementById('extra-ticker-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); addTicker(); }
+});
+
+// ── Soumission ───────────────────────────────────────────────────────────────
+document.getElementById('analysis-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  apiBase = document.getElementById('api-url').value.replace(/\/$/, '');
+
+  const outputs = [...document.querySelectorAll('input[name=outputs]:checked')].map(i => i.value);
+  const ticker  = document.getElementById('f-ticker').value.trim();
+
+  // ── Payload exact attendu par POST /api/run ──────────────────────────────
+  const payload = {
+    ticker,
+    from:    document.getElementById('f-from').value,
+    to:      document.getElementById('f-to').value,
+    freq:    document.getElementById('f-freq').value,       // daily/weekly/monthly
+    price:   document.getElementById('f-price').value,     // adjclose ou close
+    outputs,
+  };
+
+  setRunning();
+
+  try {
+    const res = await fetch(`${apiBase}/api/run`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`HTTP ${res.status} — ${txt}`);
+    }
+    const { job_id } = await res.json();
+    addLog(`Job créé : ${job_id}`);
+    pollJob(job_id);
+  } catch (err) {
+    showError(err.message);
+    resetBtn();
+  }
+});
+
+// ── Polling ───────────────────────────────────────────────────────────────────
+// GET /api/run/{id} renvoie :
+//   { status:'queued'|'running', step, progress }
+//   { status:'done', progress:100, result:{report_url, figures:[], summary:{}} }
+//   { status:'error', error }
+function pollJob(jobId) {
+  pollTimer = setInterval(async () => {
+    try {
+      const r = await fetch(`${apiBase}/api/run/${jobId}`);
+      if (!r.ok) { throw new Error(`Polling HTTP ${r.status}`); }
+      const data = await r.json();
+
+      const st = data.status;
+      document.getElementById('results-status').textContent = st;
+
+      if (st === 'running' || st === 'queued') {
+        updateProgress(data.progress || 0, data.step || 'En cours…');
+      } else if (st === 'done') {
+        clearInterval(pollTimer);
+        updateProgress(100, 'Analyse terminée');
+        addLog('Terminé.', 'log-ok');
+        document.getElementById('prog-fill').classList.remove('animate');
+        setTimeout(() => showResult(data.result, jobId), 600);
+        resetBtn();
+      } else if (st === 'error') {
+        clearInterval(pollTimer);
+        showError(data.error || 'Erreur inconnue du pipeline.');
+        addLog('Échec : ' + (data.error || '?'), 'log-err');
+        resetBtn();
+      }
+    } catch (err) {
+      clearInterval(pollTimer);
+      showError(err.message);
+      resetBtn();
+    }
+  }, 1500);
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function setRunning() {
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true; btn.classList.add('loading');
+  document.getElementById('btn-txt').textContent = 'En cours…';
+  hide('empty-state'); hide('result-area'); hide('error-area');
+  show('progress-area');
+  document.getElementById('log-console').innerHTML = '';
+  document.getElementById('results-status').textContent = 'démarrage';
+  updateProgress(3, 'Connexion au pipeline…');
+}
+function resetBtn() {
+  const btn = document.getElementById('run-btn');
+  btn.disabled = false; btn.classList.remove('loading');
+  document.getElementById('btn-txt').textContent = 'Lancer l\'analyse';
+}
+function show(id) { document.getElementById(id).style.display = ''; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+function updateProgress(pct, step) {
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-pct').textContent  = pct + ' %';
+  document.getElementById('prog-step').textContent = step;
+}
+function addLog(msg, cls = '') {
+  const c = document.getElementById('log-console');
+  const t = new Date().toLocaleTimeString('fr', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  c.innerHTML += `<span class="${cls}">[${t}] ${msg}\n</span>`;
+  c.scrollTop = c.scrollHeight;
+}
+
+// ── Affichage résultats ───────────────────────────────────────────────────────
+// result = { report_url:'/api/report/xxx', figures:['/api/figure/xxx/vol.png',…], summary:{} }
+function showResult(result, jobId) {
+  hide('progress-area');
+  const area = document.getElementById('result-area');
+  area.innerHTML = '';
+  show('result-area');
+
+  // Résumé KPIs
+  const s = result.summary || {};
+  if (Object.keys(s).length) {
+    const kpis = [
+      { lbl:'Ticker',      val: s.ticker || '—' },
+      { lbl:'Observations',val: s.n_obs   || '—' },
+      { lbl:'Modèle GARCH',val: s.modele_garch || '—' },
+      { lbl:'VaR 99% GARCH',val: s.var_99 != null ? (s.var_99*100).toFixed(2)+'%' : '—', neg: s.var_99 < 0 },
+      { lbl:'Durée (s)',   val: s.duree_s != null ? s.duree_s.toFixed(1)+'s' : '—' },
+    ];
+    area.innerHTML += `<div class="rs-sep">Résumé</div>
+      <div class="kpi-row">${kpis.map(k =>
+        `<div class="kpi-cell">
+          <div class="kpi-lbl">${k.lbl}</div>
+          <div class="kpi-val${k.neg?'.neg':''}">${k.val}</div>
+        </div>`).join('')}</div>`;
+  }
+
+  // Figures — les URLs viennent avec /api/figure/... → préfixer l'apiBase
+  const figs = result.figures || [];
+  if (figs.length) {
+    const figHtml = figs.map(url => {
+      const absUrl = url.startsWith('http') ? url : apiBase + url;
+      const name = url.split('/').pop().replace(/_/g,' ').replace('.png','');
+      return `<div class="fig-cell">
+        <img src="${absUrl}" alt="${name}" loading="lazy"
+             onclick="window.open('${absUrl}','_blank')" />
+        <div class="fig-title">${name}</div>
+      </div>`;
+    }).join('');
+    area.innerHTML += `<div class="rs-sep">Figures</div>
+      <div class="fig-grid">${figHtml}</div>`;
+  }
+
+  // Téléchargements
+  const reportUrl = result.report_url
+    ? (result.report_url.startsWith('http') ? result.report_url : apiBase + result.report_url)
+    : null;
+  area.innerHTML += `<div class="rs-sep">Téléchargements</div>
+    <div class="dl-row">
+      ${reportUrl ? `<a href="${reportUrl}" target="_blank" class="dl-btn dl-primary">⬇ Rapport PDF</a>` : ''}
+      <button class="dl-btn dl-ghost" onclick="resetView()">↩ Nouvelle analyse</button>
+    </div>`;
+}
+
+function showError(msg) {
+  hide('progress-area'); hide('empty-state'); hide('result-area');
+  const area = document.getElementById('error-area');
+  area.innerHTML = `
+    <div class="error-box">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <div>
+        <strong>Erreur pipeline</strong><br>${msg}<br>
+        <small style="color:var(--muted)">
+          Vérifiez que le serveur FastAPI tourne.
+          Commande : <code style="font-family:monospace">python -m web.app</code>
+          (branche <code style="font-family:monospace">feat/web-configurator</code>).
+        </small>
+      </div>
+    </div>
+    <div class="dl-row" style="margin-top:14px">
+      <button class="dl-btn dl-ghost" onclick="resetView()">↩ Réessayer</button>
+    </div>`;
+  show('error-area');
+  document.getElementById('results-status').textContent = 'erreur';
+}
+
+function resetView() {
+  if (pollTimer) clearInterval(pollTimer);
+  show('empty-state');
+  hide('progress-area'); hide('result-area'); hide('error-area');
+  document.getElementById('results-status').textContent = '—';
+  resetBtn();
+}
+</script>
+</body>
+</html>

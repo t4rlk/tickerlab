@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TickerLab — Analyse Quantitative</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #FFFFFF;
+      --surface: #F7F7F7;
+      --border:  #E0E0E0;
+      --text:    #0A0A0A;
+      --text2:   #3A3A3A;
+      --muted:   #888888;
+      --black:   #000000;
+      --nav-h:   60px;
+    }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; overflow-x: hidden; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #ccc; }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: var(--nav-h); background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px;
+    }
+    .nav-logo {
+      font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700;
+      color: var(--text); text-decoration: none; letter-spacing: .03em;
+    }
+    .nav-links { display: flex; align-items: center; gap: 40px; }
+    .nav-links a {
+      font-size: .78rem; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--muted); text-decoration: none; transition: color .2s;
+    }
+    .nav-links a:hover, .nav-links a.active { color: var(--text); }
+    .nav-cta {
+      font-size: .75rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+      background: var(--black); color: #fff;
+      padding: 10px 22px; text-decoration: none; transition: opacity .2s;
+    }
+    .nav-cta:hover { opacity: .75; }
+
+    /* ── SECTIONS ── */
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 0 48px; }
+
+    /* ── HERO ── */
+    .hero {
+      padding-top: calc(var(--nav-h) + 80px); padding-bottom: 80px;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-inner {
+      max-width: 1200px; margin: 0 auto; padding: 0 48px;
+      display: grid; grid-template-columns: 1fr 380px; gap: 80px; align-items: end;
+    }
+    .hero-kicker {
+      font-size: .68rem; letter-spacing: .2em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 24px; display: flex; align-items: center; gap: 10px;
+    }
+    .hero-kicker::before { content: ''; flex: 0 0 32px; height: 1px; background: var(--border); }
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.8rem, 5vw, 4.8rem); font-weight: 900;
+      line-height: 1.05; letter-spacing: -.02em; margin-bottom: 28px;
+    }
+    h1 em { font-style: italic; }
+    .hero-sub {
+      font-size: 1rem; color: var(--text2); line-height: 1.75;
+      max-width: 480px; margin-bottom: 40px;
+    }
+    .hero-actions { display: flex; gap: 14px; align-items: center; }
+    .btn {
+      font-size: .75rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+      padding: 12px 28px; text-decoration: none; display: inline-block; transition: opacity .2s;
+    }
+    .btn-black { background: var(--black); color: #fff; }
+    .btn-black:hover { opacity: .8; }
+    .btn-ghost { border: 1px solid var(--border); color: var(--text2); }
+    .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+
+    /* hero right: live metrics */
+    .hero-metrics { border: 1px solid var(--border); }
+    .metric-head {
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      font-size: .65rem; letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .metric-live {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--black);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .metric-row {
+      display: grid; grid-template-columns: 1fr 1fr;
+      padding: 16px 18px; border-bottom: 1px solid var(--border);
+      gap: 16px;
+    }
+    .metric-row:last-child { border-bottom: none; }
+    .metric-item .m-label { font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+    .metric-item .m-val {
+      font-family: 'DM Mono', monospace; font-size: 1.05rem; font-weight: 400;
+    }
+    .m-val.neg { color: #C00; }
+    .m-val.pos { color: #060; }
+
+    /* ── TICKER ── */
+    .ticker-bar {
+      border-bottom: 1px solid var(--border); overflow: hidden;
+      white-space: nowrap; background: var(--surface);
+    }
+    .ticker-inner { display: inline-block; animation: ticker 32s linear infinite; padding: 10px 0; }
+    .ticker-inner:hover { animation-play-state: paused; }
+    .ticker-item {
+      display: inline-flex; gap: 8px; align-items: center; margin-right: 48px;
+      font-family: 'DM Mono', monospace; font-size: .73rem;
+    }
+    .t-name { color: var(--muted); }
+    .t-val  { color: var(--text); }
+    .t-up   { color: #060; }
+    .t-dn   { color: #C00; }
+    .t-sep  { color: var(--border); }
+    @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+    /* ── FEATURES ── */
+    .features-section { padding: 96px 0; border-bottom: 1px solid var(--border); }
+    .section-label {
+      font-size: .65rem; letter-spacing: .22em; text-transform: uppercase; color: var(--muted);
+      display: flex; align-items: center; gap: 12px; margin-bottom: 48px;
+    }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    h2 {
+      font-family: 'Playfair Display', serif; font-size: clamp(1.8rem, 3vw, 2.6rem);
+      font-weight: 700; line-height: 1.1; letter-spacing: -.01em;
+    }
+    h2 em { font-style: italic; }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid var(--border);
+      border-left: 1px solid var(--border);
+    }
+    .feat {
+      padding: 36px 32px;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      transition: background .2s;
+    }
+    .feat:hover { background: var(--surface); }
+    .feat-num {
+      font-family: 'DM Mono', monospace; font-size: .7rem; color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .feat-title { font-size: 1rem; font-weight: 600; margin-bottom: 10px; }
+    .feat-desc { font-size: .83rem; color: var(--text2); line-height: 1.65; }
+    .feat-tag {
+      display: inline-block; margin-top: 16px;
+      font-size: .6rem; letter-spacing: .12em; text-transform: uppercase;
+      border: 1px solid var(--border); padding: 3px 9px; color: var(--muted);
+    }
+    .feat-tag.soon { border-style: dashed; }
+
+    /* ── MODULES PREVIEW ── */
+    .modules-section { padding: 96px 0; border-bottom: 1px solid var(--border); }
+    .modules-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 48px; gap: 32px; }
+    .modules-list { border-top: 1px solid var(--border); }
+    .module-row {
+      display: grid; grid-template-columns: 48px 1fr 140px 120px;
+      align-items: center; padding: 22px 0;
+      border-bottom: 1px solid var(--border); gap: 32px;
+      transition: background .15s; cursor: pointer;
+      text-decoration: none; color: inherit;
+    }
+    .module-row:hover { background: var(--surface); margin: 0 -24px; padding-left: 24px; padding-right: 24px; }
+    .module-idx { font-family: 'DM Mono', monospace; font-size: .75rem; color: var(--muted); }
+    .module-name { font-size: .95rem; font-weight: 500; }
+    .module-sub  { font-size: .78rem; color: var(--muted); margin-top: 3px; }
+    .module-family {
+      font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+    }
+    .module-status {
+      font-size: .6rem; letter-spacing: .12em; text-transform: uppercase;
+      padding: 4px 10px; text-align: center;
+    }
+    .module-status.live  { background: var(--black); color: #fff; }
+    .module-status.soon  { border: 1px dashed var(--border); color: var(--muted); }
+    .module-status.wip   { border: 1px solid var(--text); color: var(--text); }
+
+    /* ── STRIP CTA ── */
+    .strip-cta {
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      padding: 80px 0;
+    }
+    .strip-cta .wrap { display: flex; justify-content: space-between; align-items: center; gap: 40px; }
+    .strip-cta h2 { max-width: 560px; }
+    .strip-cta .actions { display: flex; gap: 14px; flex-shrink: 0; }
+
+    /* ── ROADMAP ── */
+    .roadmap-section { padding: 96px 0; border-bottom: 1px solid var(--border); }
+    .roadmap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); margin-top: 48px; }
+    .roadmap-cell { background: var(--bg); padding: 28px 24px; }
+    .roadmap-cell:hover { background: var(--surface); }
+    .rc-status { font-size: .6rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+    .rc-status.done { color: #060; }
+    .rc-status.wip  { color: var(--text); font-weight: 600; }
+    .rc-name { font-size: .93rem; font-weight: 600; margin-bottom: 8px; }
+    .rc-desc { font-size: .77rem; color: var(--muted); line-height: 1.6; }
+
+    /* ── FOOTER ── */
+    footer { padding: 64px 0 32px; background: var(--black); color: #fff; }
+    .footer-inner { max-width: 1200px; margin: 0 auto; padding: 0 48px; }
+    .footer-top {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 48px; padding-bottom: 48px; border-bottom: 1px solid #222;
+    }
+    .footer-logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: #fff; margin-bottom: 14px; display: block; }
+    .footer-tagline { font-size: .8rem; color: #666; line-height: 1.7; max-width: 240px; }
+    .footer-col h5 { font-size: .63rem; letter-spacing: .2em; text-transform: uppercase; color: #555; margin-bottom: 18px; }
+    .footer-col a { display: block; font-size: .8rem; color: #888; text-decoration: none; margin-bottom: 10px; transition: color .2s; }
+    .footer-col a:hover { color: #fff; }
+    .footer-bottom { max-width: 1200px; margin: 0 auto; padding: 24px 48px 0; display: flex; justify-content: space-between; align-items: center; }
+    .footer-bottom p { font-size: .72rem; color: #444; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .hero-inner { grid-template-columns: 1fr; }
+      .hero-metrics { display: none; }
+      .wrap { padding: 0 20px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .roadmap-grid { grid-template-columns: 1fr 1fr; }
+      .modules-header { flex-direction: column; align-items: flex-start; }
+      .footer-top { grid-template-columns: 1fr 1fr; }
+      .strip-cta .wrap { flex-direction: column; align-items: flex-start; }
+      .gallery-grid { grid-template-columns: 1fr; }
+      .band-figure, .band-figure.compact { height: 42vh; min-height: 260px; }
+    }
+
+    /* ── IMAGERIE (marbre) ── */
+    .img-band { line-height: 0; }
+    .img-band--sep { border-bottom: 1px solid var(--border); }
+    .band-figure {
+      position: relative; overflow: hidden; background: var(--surface);
+      width: 100%; height: 56vh; min-height: 340px;
+    }
+    .band-figure.compact { height: 46vh; min-height: 300px; }
+    .band-figure img { width: 100%; height: 100%; object-fit: cover; }
+
+    .gallery-section { padding: 96px 0; border-bottom: 1px solid var(--border); }
+    .gallery-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+      background: var(--border); border: 1px solid var(--border);
+    }
+    .gallery-cell { background: var(--bg); }
+    .gallery-figure {
+      position: relative; overflow: hidden; background: var(--surface); aspect-ratio: 4 / 3;
+    }
+    .gallery-figure::after {
+      content: ''; position: absolute; inset: 12px;
+      border: 1px solid rgba(255,255,255,.4); pointer-events: none; z-index: 2;
+    }
+    .gallery-figure img { width: 100%; height: 100%; object-fit: cover; }
+    .gallery-cap { padding: 16px 20px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .gc-name { font-size: .9rem; font-weight: 600; }
+    .gc-sub  { font-size: .66rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+
+    /* ── FADE IN ── */
+    .fade-in { opacity: 0; transform: translateY(20px); transition: opacity .55s, transform .55s; }
+    .fade-in.vis { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- ═══ NAV ════════════════════════════════════════════════════════════════ -->
+<nav>
+  <a class="nav-logo" href="landing.html">TickerLab</a>
+  <div class="nav-links">
+    <a href="analyse.html" class="active">Analyse</a>
+    <a href="landing.html#modules">Modules</a>
+    <a href="methodologie.html">Méthodologie</a>
+    <a href="contact.html">Contact</a>
+  </div>
+  <a href="analyse.html" class="nav-cta">Lancer une analyse</a>
+</nav>
+
+<!-- ═══ HERO ═══════════════════════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="hero-kicker">Analyse Quantitative — Finance & Matières Premières</div>
+      <h1>L'Économétrie<br>au Standard<br><em>Institutionnel</em></h1>
+      <p class="hero-sub">
+        Pipeline ARIMA–GARCH–VAR complet, VaR dynamique et rapport PDF de publication — sans coder une ligne.
+      </p>
+      <div class="hero-actions">
+        <a href="analyse.html" class="btn btn-black">Démarrer une analyse</a>
+        <a href="methodologie.html" class="btn btn-ghost">Lire la méthodologie →</a>
+      </div>
+    </div>
+
+    <div class="hero-metrics">
+      <div class="metric-head">
+        <span>Exemple — BZ=F · Brent Crude</span>
+        <span class="metric-live"></span>
+      </div>
+      <div class="metric-row">
+        <div class="metric-item">
+          <div class="m-label">VaR 99%</div>
+          <div class="m-val neg" id="m-var">−4.38%</div>
+        </div>
+        <div class="metric-item">
+          <div class="m-label">Vol. cond.</div>
+          <div class="m-val" id="m-vol">1.82%</div>
+        </div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-item">
+          <div class="m-label">TVaR 99%</div>
+          <div class="m-val neg" id="m-tvar">−5.91%</div>
+        </div>
+        <div class="metric-item">
+          <div class="m-label">Kupiec p</div>
+          <div class="m-val pos" id="m-kup">0.412</div>
+        </div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-item">
+          <div class="m-label">Modèle</div>
+          <div class="m-val" style="font-size:.88rem">GJR-GARCH(1,1)</div>
+        </div>
+        <div class="metric-item">
+          <div class="m-label">Ruptures</div>
+          <div class="m-val">3 (ICSS)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ HERO — IMAGE ═════════════════════════════════════════════════════════ -->
+<section class="img-band img-band--sep">
+  <figure class="band-figure">
+    <img src="images/image-I-heros.png" loading="lazy"
+         alt="Statue grecque en marbre blanc dans une galerie baignée de lumière">
+  </figure>
+</section>
+
+<!-- ═══ TICKER ══════════════════════════════════════════════════════════════ -->
+<div class="ticker-bar">
+  <div class="ticker-inner" id="ticker-el"></div>
+</div>
+
+<!-- ═══ FEATURES ════════════════════════════════════════════════════════════ -->
+<section class="features-section">
+  <div class="wrap">
+    <div class="section-label fade-in">Ce que la plateforme fait</div>
+    <div class="features-grid fade-in">
+      <div class="feat">
+        <div class="feat-num">01</div>
+        <div class="feat-title">Modélisation automatique</div>
+        <div class="feat-desc">Sélection ARIMA et GARCH par AIC/BIC sur grille complète : 5 spécifications × 4 distributions, avec tests de spécification.</div>
+        <span class="feat-tag">Univarié</span>
+      </div>
+      <div class="feat">
+        <div class="feat-num">02</div>
+        <div class="feat-title">VaR & Risk Management</div>
+        <div class="feat-desc">Six méthodes de VaR (GARCH, FHS, Historique, Normale, Student, Cornish-Fisher). Backtests Kupiec, Christoffersen et FRTB.</div>
+        <span class="feat-tag">Réglementaire</span>
+      </div>
+      <div class="feat">
+        <div class="feat-num">03</div>
+        <div class="feat-title">VAR Multivarié</div>
+        <div class="feat-desc">Causalité de Granger, IRF orthogonalisées (Cholesky), décomposition FEVD. Sélection d'ordre AIC/BIC/HQIC/FPE. Test DGP 6/6.</div>
+        <span class="feat-tag live" style="background:var(--black);color:#fff;border:none">Nouveau</span>
+      </div>
+      <div class="feat">
+        <div class="feat-num">04</div>
+        <div class="feat-title">Rapport PDF complet</div>
+        <div class="feat-desc">Sorties LaTeX style EViews, figures haute résolution, prose rédigée par IA (Claude Opus). Prêt pour la publication.</div>
+        <span class="feat-tag">Publication</span>
+      </div>
+      <div class="feat">
+        <div class="feat-num">05</div>
+        <div class="feat-title">Cointégration & VECM</div>
+        <div class="feat-desc">Engle-Granger, Johansen (trace + λ-max), modèle à correction d'erreur. Idéal pour les paires Brent/WTI ou Or/Indices.</div>
+        <span class="feat-tag soon">À venir</span>
+      </div>
+      <div class="feat">
+        <div class="feat-num">06</div>
+        <div class="feat-title">Données Panel</div>
+        <div class="feat-desc">Effets fixes, effets aléatoires, test de Hausman. Stationnarité en panel (LLC, IPS). Multi-pays ou multi-actifs simultanément.</div>
+        <span class="feat-tag soon">À venir</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ GALERIE ══════════════════════════════════════════════════════════════ -->
+<section class="gallery-section">
+  <div class="wrap">
+    <div class="section-label fade-in">Aperçu de la plateforme</div>
+    <div class="gallery-grid fade-in">
+      <div class="gallery-cell">
+        <figure class="gallery-figure">
+          <img src="images/image-II-analyse.png" loading="lazy"
+               alt="Courbe de volatilité gravée sur papier ivoire, compas en acier">
+        </figure>
+        <div class="gallery-cap">
+          <span class="gc-name">Analyse univariée</span>
+          <span class="gc-sub">ARIMA · GARCH · VaR</span>
+        </div>
+      </div>
+      <div class="gallery-cell">
+        <figure class="gallery-figure">
+          <img src="images/image-III-signaux.png" loading="lazy"
+               alt="Colonnade de marbre clair, jeu d'ombres géométriques">
+        </figure>
+        <div class="gallery-cap">
+          <span class="gc-name">Signaux &amp; régimes</span>
+          <span class="gc-sub">FHS · Ruptures ICSS</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ MODULES LIST ═════════════════════════════════════════════════════════ -->
+<section class="modules-section" id="modules">
+  <div class="wrap">
+    <div class="modules-header fade-in">
+      <div>
+        <div class="section-label">Registre des modules</div>
+        <h2>Suite <em>Analytique</em></h2>
+      </div>
+      <p style="color:var(--muted);font-size:.85rem;max-width:320px;line-height:1.7">
+        Chaque module s'enregistre automatiquement. L'UI reflète l'état du registre sans modification manuelle.
+      </p>
+    </div>
+    <div class="modules-list fade-in">
+      <a href="analyse.html" class="module-row">
+        <span class="module-idx">01</span>
+        <div><div class="module-name">ARIMA / ARMA</div><div class="module-sub">Sélection automatique + prévisions bootstrap</div></div>
+        <span class="module-family">Univarié</span>
+        <span class="module-status live">Actif</span>
+      </a>
+      <a href="analyse.html" class="module-row">
+        <span class="module-idx">02</span>
+        <div><div class="module-name">GARCH · GJR · FIGARCH</div><div class="module-sub">Grid search 5×4 · Score composite · Backtests</div></div>
+        <span class="module-family">Univarié</span>
+        <span class="module-status live">Actif</span>
+      </a>
+      <a href="analyse.html" class="module-row">
+        <span class="module-idx">03</span>
+        <div><div class="module-name">FHS · VaR · TVaR</div><div class="module-sub">6 méthodes · Kupiec · Christoffersen · FRTB</div></div>
+        <span class="module-family">Risque</span>
+        <span class="module-status live">Actif</span>
+      </a>
+      <a href="analyse.html" class="module-row">
+        <span class="module-idx">04</span>
+        <div><div class="module-name">VAR Multivarié</div><div class="module-sub">Granger · IRF Cholesky · FEVD · ≥ 2 actifs</div></div>
+        <span class="module-family">Multivarié</span>
+        <span class="module-status wip">MV.3 livré</span>
+      </a>
+      <div class="module-row" style="cursor:default">
+        <span class="module-idx">05</span>
+        <div><div class="module-name">Johansen · VECM</div><div class="module-sub">Trace · λ-max · Correction d'erreur</div></div>
+        <span class="module-family">Multivarié</span>
+        <span class="module-status soon">À venir</span>
+      </div>
+      <div class="module-row" style="cursor:default">
+        <span class="module-idx">06</span>
+        <div><div class="module-name">DCC-GARCH · CCC</div><div class="module-sub">Corrélations dynamiques · VaR portefeuille</div></div>
+        <span class="module-family">Multivarié</span>
+        <span class="module-status soon">À venir</span>
+      </div>
+      <div class="module-row" style="cursor:default">
+        <span class="module-idx">07</span>
+        <div><div class="module-name">Données Panel</div><div class="module-sub">Effets fixes / aléatoires · Hausman · IPS · LLC</div></div>
+        <span class="module-family">Panel</span>
+        <span class="module-status soon">À venir</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ BANDE — MÉTHODE ══════════════════════════════════════════════════════ -->
+<section class="img-band">
+  <figure class="band-figure compact">
+    <img src="images/image-IV-methode.png" loading="lazy"
+         alt="Main de statue en marbre tenant un stylet, lumière latérale">
+  </figure>
+</section>
+
+<!-- ═══ STRIP CTA ════════════════════════════════════════════════════════════ -->
+<div class="strip-cta">
+  <div class="wrap">
+    <h2>Démarrez votre <em>première analyse</em><br>en moins de deux minutes.</h2>
+    <div class="actions">
+      <a href="analyse.html"    class="btn btn-black">Lancer une analyse</a>
+      <a href="methodologie.html" class="btn btn-ghost">Lire la méthodo →</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ROADMAP ══════════════════════════════════════════════════════════════ -->
+<section class="roadmap-section">
+  <div class="wrap">
+    <div class="section-label fade-in">Développement</div>
+    <h2 class="fade-in"><em>Roadmap</em></h2>
+    <div class="roadmap-grid fade-in">
+      <div class="roadmap-cell">
+        <div class="rc-status done">✓ Livré — Phase 9</div>
+        <div class="rc-name">Pipeline ARIMA-GARCH-VaR</div>
+        <div class="rc-desc">Univarié complet avec FIGARCH, FHS, backtests FRTB et rapport IA.</div>
+      </div>
+      <div class="roadmap-cell">
+        <div class="rc-status done">✓ Livré — MV.1–3</div>
+        <div class="rc-name">VAR Multivarié</div>
+        <div class="rc-desc">Registre déclaratif, panel loader, VAR complet. Test DGP 6/6.</div>
+      </div>
+      <div class="roadmap-cell">
+        <div class="rc-status wip">⟳ En cours — MV.4–6</div>
+        <div class="rc-name">Config Web + Rapport</div>
+        <div class="rc-desc">Pydantic multivarié, endpoint /api/catalogue, render PDF VAR.</div>
+      </div>
+      <div class="roadmap-cell">
+        <div class="rc-status">◎ Planifié — MV-Coint</div>
+        <div class="rc-name">Johansen · VECM · DCC</div>
+        <div class="rc-desc">Cointégration, corrélations conditionnelles, données panel.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══════════════════════════════════════════════════════════════ -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div>
+        <span class="footer-logo">TickerLab</span>
+        <p class="footer-tagline">Pipeline d'analyse quantitative pour actifs financiers et matières premières.</p>
+      </div>
+      <div class="footer-col">
+        <h5>Navigation</h5>
+        <a href="analyse.html">Lancer une analyse</a>
+        <a href="landing.html#modules">Modules</a>
+        <a href="methodologie.html">Méthodologie</a>
+        <a href="contact.html">Contact & SAV</a>
+      </div>
+      <div class="footer-col">
+        <h5>Actifs</h5>
+        <a href="analyse.html">Pétrole Brent (BZ=F)</a>
+        <a href="analyse.html">WTI (CL=F)</a>
+        <a href="analyse.html">Or (GC=F)</a>
+        <a href="analyse.html">S&amp;P 500 (^GSPC)</a>
+      </div>
+      <div class="footer-col">
+        <h5>Ressources</h5>
+        <a href="methodologie.html">Documentation PDF</a>
+        <a href="contact.html">Support</a>
+        <a href="contact.html#faq">FAQ</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 TickerLab — v6.3 · feat/mv-socle-var</p>
+      <p>Propulsé par statsmodels · arch · FastAPI</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* Ticker */
+const td=[
+  {n:'BZ=F', v:'83.42',c:'+1.24%',u:1},{n:'CL=F',v:'79.18',c:'+0.87%',u:1},
+  {n:'GC=F', v:'2341.5',c:'-0.31%',u:0},{n:'^GSPC',v:'5218',c:'+0.55%',u:1},
+  {n:'NG=F', v:'2.183',c:'-1.12%',u:0},{n:'^VIX',v:'14.82',c:'-0.90%',u:0},
+  {n:'HG=F', v:'4.572',c:'+2.03%',u:1},{n:'SI=F',v:'29.14',c:'+0.45%',u:1},
+];
+const el=document.getElementById('ticker-el');
+el.innerHTML=[...td,...td].map(d=>
+  `<span class="ticker-item">
+    <span class="t-name">${d.n}</span>
+    <span class="t-val">${d.v}</span>
+    <span class="${d.u?'t-up':'t-dn'}">${d.c}</span>
+    <span class="t-sep">|</span>
+  </span>`).join('');
+
+/* Fade in */
+const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('vis')}),{threshold:.12});
+document.querySelectorAll('.fade-in').forEach(el=>obs.observe(el));
+
+/* Live metric drift */
+setInterval(()=>{
+  const drift=()=>(Math.random()-.5)*.04;
+  ['m-var','m-tvar'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    const v=parseFloat(el.textContent.replace('−','-').replace('%',''));
+    el.textContent='−'+Math.abs((v+drift())).toFixed(2)+'%';
+  });
+  const vol=document.getElementById('m-vol');
+  if(vol){const v=parseFloat(vol.textContent);vol.textContent=(v+drift()/5).toFixed(2)+'%';}
+},3500);
+</script>
+</body>
+</html>

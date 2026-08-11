@@ -1,0 +1,133 @@
+\appendix
+\section*{Annexes}
+\addcontentsline{toc}{section}{Annexes}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Annexe A --- Séries temporelles}
+\addcontentsline{toc}{subsection}{Annexe A --- Séries temporelles}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{../graphiques/fig_brent.pdf}
+  \caption{S\'{e}rie de prix --- \tickerName}
+  \label{fig:serie_brent}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{../graphiques/fig_lbrent.pdf}
+  \caption{Log-prix --- \tickerName}
+  \label{fig:serie_lbrent}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{../graphiques/fig_dlbrent.pdf}
+  \caption{Log-rendements --- \tickerName}
+  \label{fig:serie_dlbrent}
+\end{figure}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Annexe B --- Statistiques descriptives (histogrammes)}
+\addcontentsline{toc}{subsection}{Annexe B --- Statistiques descriptives}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{../graphiques/fig_hist_lbrent.pdf}
+  \caption{Distribution de LBRENT}
+  \label{fig:hist_lbrent}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{../graphiques/fig_hist_dlbrent.pdf}
+  \caption{Distribution de DLBRENT}
+  \label{fig:hist_dlbrent}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{../graphiques/fig_hist_resid_arima.pdf}
+  \caption{Distribution des résidus ARIMA}
+  \label{fig:hist_resid}
+\end{figure}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Annexe C --- Corrélogrammes ACF/PACF}
+\addcontentsline{toc}{subsection}{Annexe C --- Corrélogrammes}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{../graphiques/fig_corr_lbrent.pdf}
+  \caption{Corrélogramme de LBRENT (36 retards)}
+  \label{fig:corr_lbrent}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{../graphiques/fig_corr_dlbrent.pdf}
+  \caption{Corrélogramme de DLBRENT (36 retards)}
+  \label{fig:corr_dlbrent}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{../graphiques/fig_corr_resid_arima.pdf}
+  \caption{Corrélogramme des résidus ARIMA}
+  \label{fig:corr_resid}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{../graphiques/fig_corr_resid2_arima.pdf}
+  \caption{Corrélogramme des résidus² ARIMA (détection effets ARCH)}
+  \label{fig:corr_resid2}
+\end{figure}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Annexe D --- Tests de stationnarité}
+\addcontentsline{toc}{subsection}{Annexe D --- Tests de stationnarité}
+
+\input{../latex/tab_statio_lbrent.tex}
+\vspace{0.5cm}
+\input{../latex/tab_statio_dlbrent.tex}
+\vspace{0.5cm}
+\input{../latex/tab_statio_synthese.tex}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Annexe E --- Estimation ARIMA}
+\addcontentsline{toc}{subsection}{Annexe E --- Estimation ARIMA}
+
+\input{../latex/tab_arima_estim.tex}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Annexe F --- Test ARCH-LM}
+\addcontentsline{toc}{subsection}{Annexe F --- Test ARCH-LM}
+
+\input{../latex/tab_arch_lm.tex}
+
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{Annexe G --- Modèles GARCH benchmarks}
+\addcontentsline{toc}{subsection}{Annexe G --- Modèles GARCH}
+
+\input{../latex/tab_arch4.tex}
+\vspace{0.5cm}
+\input{../latex/tab_garch11.tex}
+
+\newpage
+
+\input{../latex/tab_gjr11.tex}
+\vspace{0.5cm}
+\input{../latex/tab_egarch11.tex}

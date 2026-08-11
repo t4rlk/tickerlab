@@ -1,0 +1,18 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Lockfile reproductible du PIPELINE (runtime économétrique).
+# Source de vérité ABSTRAITE = pyproject.toml [project.dependencies].
+# Ce fichier en est le miroir ÉPINGLÉ. Idéalement régénéré par :
+#   pip-compile pyproject.toml -o requirements.txt
+# Dépendances web : voir requirements-web.txt (ou `pip install tickerlab[web]`).
+# ─────────────────────────────────────────────────────────────────────────────
+pydantic>=2.0
+arch==8.0.0
+statsmodels==0.14.6
+scipy==1.17.1
+numpy==2.4.4
+pandas==3.0.3
+reportlab==4.5.1
+matplotlib==3.10.8
+yfinance==1.3.0
+tqdm==4.67.3
+PyYAML==6.0.2      # importé par web/mapping.py (import yaml) — requis pour le configurateur web

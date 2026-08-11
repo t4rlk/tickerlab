@@ -1,0 +1,163 @@
+﻿\documentclass[a4paper,12pt]{article}
+
+% ── Encodage & langue ──────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{csquotes}
+
+% ── Mise en page ───────────────────────────────────────────────────────────
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textit{TickerLab --- Analyse \'{E}conom\'{e}trique --- \tickerName}}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ── Typographie ────────────────────────────────────────────────────────────
+\usepackage{lmodern}   % police vectorielle (Type1) : requise pour l'expansion microtype
+\usepackage{microtype}
+\usepackage{setspace}
+\onehalfspacing
+
+% ── Titres de sections ─────────────────────────────────────────────────────
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries\sffamily}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries\sffamily}{}{0em}{}
+
+% ── Mathématiques ──────────────────────────────────────────────────────────
+\usepackage{mathtools}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% ── Tableaux & figures ─────────────────────────────────────────────────────
+\usepackage{booktabs}
+\usepackage{adjustbox}
+\usepackage{float}
+\usepackage{pdflscape}
+\usepackage[table]{xcolor}
+\usepackage{graphicx}
+
+% ── Couleurs ───────────────────────────────────────────────────────────────
+\definecolor{darkred}{HTML}{7B1F1F}
+\definecolor{lightgray}{gray}{0.92}
+
+% ── Liens hypertexte ───────────────────────────────────────────────────────
+\usepackage[
+  colorlinks=true,
+  linkcolor=darkred,
+  citecolor=darkred,
+  urlcolor=darkred
+]{hyperref}
+
+% ── Bibliographie ──────────────────────────────────────────────────────────
+\usepackage[
+  backend=biber,
+  style=authoryear,
+  sorting=nyt,
+  maxcitenames=2,
+  maxbibnames=99
+]{biblatex}
+\addbibresource{references.bib}
+
+% ── Commandes paramétrables ────────────────────────────────────────────────
+\newcommand{\tickerName}{%%TICKER_NAME%%}
+\newcommand{\projectTitle}{Analyse de la volatilit\'{e} et des risques de march\'{e} : \tickerName}
+
+% ══════════════════════════════════════════════════════════════════════════
+\begin{document}
+
+% ── Page de garde ─────────────────────────────────────────────────────────
+\begin{titlepage}
+  \pagecolor{darkred}
+  \color{white}
+  \centering
+  \vspace*{1.5cm}
+
+  {\sffamily\Large\bfseries TickerLab}\\[0.2cm]
+  {\sffamily\normalsize Analyse \'{E}conom\'{e}trique Automatis\'{e}e}\\[0.2cm]
+  \rule{\textwidth}{0.5pt}\\[0.8cm]
+
+  {\sffamily\small Rapport d'Analyse de Risque de March\'{e}}\\[1.5cm]
+
+  \rule{0.6\textwidth}{1pt}\\[0.6cm]
+  {\sffamily\LARGE\bfseries \projectTitle}\\[0.6cm]
+  \rule{0.6\textwidth}{1pt}\\[2cm]
+
+  \vfill
+  {\sffamily\small \today}
+\end{titlepage}
+\nopagecolor
+
+% ── Sommaire ──────────────────────────────────────────────────────────────
+\tableofcontents
+\newpage
+
+% ── Avant-propos ──────────────────────────────────────────────────────────
+\section{Avant-propos}
+\input{00_avant_propos.tex}
+\newpage
+
+% ── Préambule ─────────────────────────────────────────────────────────────
+\section{Pr\'{e}ambule}
+\input{01_preambule.tex}
+\newpage
+
+% ── Introduction ──────────────────────────────────────────────────────────
+\section{Introduction g\'{e}n\'{e}rale}
+\input{03_introduction.tex}
+\newpage
+
+% ── Partie I : Analyse fondamentale ───────────────────────────────────────
+\section{D\'{e}terminants du prix de \tickerName}
+\input{04_determinants.tex}
+\newpage
+
+\section{Revue de litt\'{e}rature}
+\input{05_revue_litteraire.tex}
+\newpage
+
+% ── Partie II : Analyse empirique ─────────────────────────────────────────
+\section{Analyse empirique et tests de stationnarit\'{e}}
+\input{06_empirique_stationnarite.tex}
+\newpage
+
+\section{Identification et estimation ARIMA}
+\input{07_arma.tex}
+\input{../latex/tab_arima.tex}
+\newpage
+
+\section{Mod\`{e}les de volatilit\'{e} conditionnelle GARCH}
+\input{08_garch.tex}
+\input{../latex/tab_garch.tex}
+\newpage
+
+% ── Partie III : Mesure et validation du risque ───────────────────────────
+\section{Value-at-Risk (VaR)}
+\input{09_var.tex}
+\input{../latex/tab_var.tex}
+\newpage
+
+\section{TVaR (Expected Shortfall)}
+\input{10_tvar.tex}
+\newpage
+
+\section{Backtesting out-of-sample}
+\input{11_backtest.tex}
+\input{../latex/tab_backtest.tex}
+\newpage
+
+% ── Conclusion ────────────────────────────────────────────────────────────
+\section{Conclusion g\'{e}n\'{e}rale}
+\input{12_conclusion.tex}
+\newpage
+
+% ── Bibliographie ─────────────────────────────────────────────────────────
+\input{14_bibliographie.tex}
+
+% ── Annexes ───────────────────────────────────────────────────────────────────
+\input{13_annexes.tex}
+
+\end{document}
