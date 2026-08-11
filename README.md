@@ -1,57 +1,137 @@
 # tickerlab
 
-Pipeline d'analyse de volatilité et de VaR pour actifs financiers (PEA, matières premières, indices). Modélisation ARIMA/GARCH, VaR multi-méthodes, backtests réglementaires, rapport PDF automatique.
+> Plateforme Python d'économétrie financière : modélisation de la volatilité conditionnelle, mesure du risque de marché et backtesting réglementaire.
+
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![Tests](https://img.shields.io/badge/tests-200%2B-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-lightgrey)
+
+![Volatilité conditionnelle estimée sur le Brent](docs/img/volatilite_brent.png)
+
+---
+
+## Contexte
+
+La mesure du risque de marché se heurte à deux difficultés communes à la plupart des classes d'actifs : une volatilité conditionnelle fortement asymétrique, où les chocs négatifs pèsent davantage que les chocs positifs de même ampleur, et des ruptures structurelles qui invalident l'hypothèse de stabilité des paramètres.
+
+tickerlab industrialise la chaîne complète — estimation, mesure de risque, validation — pour tout actif disposant d'un historique de prix : actions, indices, devises, matières premières. L'objectif n'est pas de produire une VaR, mais de produire une VaR dont on sait si elle tient.
+
+## Fonctionnalités
+
+**Modélisation de la moyenne**
+Estimation ARIMA sur log-rendements, sélection automatique de l'ordre, diagnostics de résidus.
+
+**Volatilité conditionnelle**
+Spécifications GARCH, EGARCH, TGARCH et Component GARCH. Lois normale, Student, Student asymétrique et GED. Sélection par critère AIC avec fenêtre ΔAIC, complétée d'un score composite intégrant les diagnostics de résidus et un terme de parcimonie.
+
+**Ruptures structurelles**
+Détection par ICSS et test de Zivot-Andrews, intégrée à l'équation de variance.
+
+**Mesure de risque**
+VaR et Expected Shortfall par simulation historique filtrée et bootstrap, avec correction de Cornish-Fisher et garde de monotonicité.
+
+**Backtesting réglementaire**
+Six tests de niveau FRTB : couverture inconditionnelle (Kupiec), indépendance des exceptions (Christoffersen), Dynamic Quantile (Engle-Manganelli), adéquation de l'Expected Shortfall (Acerbi-Székely, Fissler-Ziegel), et test PIT de Berkowitz.
+
+**Comparaison prédictive**
+Test de Diebold-Mariano sur fonction de perte tick, avec correction de Giacomini-Komunjer.
+
+**Reporting**
+Génération automatisée de rapports PDF, avec sorties reproduisant le format EViews afin d'assurer la traçabilité et la vérifiabilité des estimations.
 
 ## Installation
 
 ```bash
+git clone https://github.com/t4rlk/tickerlab.git
+cd tickerlab
+```
+
+**Linux / macOS**
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+**Windows (PowerShell)**
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+Puis, quel que soit le système :
+
+```bash
 pip install -e .           # pipeline seul
-pip install -e ".[web]"    # + configurateur web (FastAPI)
-pip install -e ".[ai]"     # + rédaction IA du rapport (Groq/Anthropic)
+pip install -e ".[web]"    # + interface web (FastAPI)
+pip install -e ".[ai]"     # + rédaction assistée des commentaires
 pip install -e ".[dev]"    # + outils de test
 ```
 
-## Usage CLI
+Configuration optionnelle pour la rédaction assistée — copier le fichier d'exemple, puis renseigner la clé du fournisseur choisi :
 
 ```bash
-tickerlab run BZ=F --from 2015-01-01 --to 2025-01-01 --freq daily --out report
-tickerlab --help
+cp .env.example .env       # Linux / macOS
+copy .env.example .env     # Windows
 ```
 
-## Usage web
+## Utilisation
+
+**En ligne de commande**
 
 ```bash
-tickerlab-web          # démarre sur http://localhost:8000
-# ou
-python -m web.app
+python main.py --ticker BZ=F --debut 2006-01-01 --fin 2024-12-31      # Brent
+python main.py --ticker ^GSPC --debut 2010-01-01 --fin 2024-12-31     # S&P 500
+python main.py --ticker EURUSD=X --debut 2015-01-01 --fin 2024-12-31  # EUR/USD
 ```
 
-Configurateur accessible sur `http://localhost:8000` — analyse en un clic, rapport PDF téléchargeable.
+Le rapport PDF est généré dans `resultats/`.
 
-## Structure
+**Interface web**
 
-```
-core/           Logique économétrique (ARIMA, GARCH, VaR, rapport PDF)
-  rapport/
-    sections/   Sous-modules PDF : stationarite, arima_garch, var_backtest…
-web/            Couche FastAPI (configurateur + API REST)
-  static/       Pages HTML (landing, analyse, contact, méthodologie)
-tests/          166+ tests unitaires et d'intégration
-docs/           Notes techniques, RELEASE_NOTES, références
+```bash
+tickerlab-web
 ```
 
-## Branches
+Configurateur accessible sur `http://localhost:8000` : paramétrage de l'analyse, exécution, et rapport PDF téléchargeable.
 
-- `main` / `master` — socle Phase 2 (stable)
-- `feat/web-configurator` — configurateur web + pipeline complet (branche active)
-- `chore/audit-remediation` — remédiation post-audit (en cours de merge)
+## Architecture
 
-> **Note** : la branche de référence à jour est `feat/web-configurator`. `master` est figé à la Phase 2.
-> Décision de merge à valider avec Tarik (voir Chantier 5.2 de l'audit).
+```
+tickerlab/
+├── core/                  # estimation, mesure de risque, backtests
+│   └── rapport/           # génération PDF, sections et thèmes
+├── utils/                 # rédaction assistée, cache, export LaTeX
+├── templates/latex_doc/   # gabarits LaTeX des sections de rapport
+├── web/                   # interface FastAPI et frontend statique
+├── scripts/               # validation multi-tickers, contrôle de couverture
+├── tests/                 # suite de tests
+├── docs/                  # documentation et figures
+├── main.py                # point d'entrée CLI
+└── config.yaml            # paramètres d'exécution
+```
 
-## Liens
+## Tests
 
-- [CHANGELOG](CHANGELOG.md)
-- [Méthodologie](web/README.md)
-- [Documentation technique](docs/)
-- [Audit & remédiation](INSTRUCTION_CLAUDE_CODE_AUDIT.md)
+```bash
+pytest
+```
+
+Plus de 200 tests couvrant l'estimation, les mesures de risque, les backtests et la chaîne de génération de rapport. Intégration continue via GitHub Actions, avec seuils de couverture calibrés par module.
+
+## Limites
+
+Les tests de backtesting perdent en puissance sur de courts échantillons : les résultats de couverture conditionnelle demandent une fenêtre suffisante pour être concluants. Les mesures de risque reposent sur l'hypothèse que la loi conditionnelle estimée reste valide hors échantillon, hypothèse d'autant plus fragile que les ruptures structurelles sont fréquentes. Enfin, l'horizon de prévision est d'un jour ; l'extension par racine du temps n'est pas justifiée sous volatilité conditionnelle.
+
+## Références méthodologiques
+
+Bollerslev (1986) · Nelson (1991) · Glosten, Jagannathan & Runkle (1993) · Inclán & Tiao (1994) · Zivot & Andrews (1992) · Kupiec (1995) · Christoffersen (1998) · Berkowitz (2001) · Engle & Manganelli (2004) · Acerbi & Székely (2014) · Fissler & Ziegel (2016) · Diebold & Mariano (1995) · Giacomini & Komunjer (2005)
+
+## Auteurs
+
+**Tarik Yazanel** — conception et développement de la plateforme
+
+## Licence
+
+MIT
