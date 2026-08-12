@@ -810,7 +810,8 @@ def _construire_trace(df_val, trace, col_ic, ic_min, tol_delta):
 
 # ── Estimation finale ────────────────────────────────────────────────────────
 
-def estimer_final(rendements, vol, o, p, q, dist, power=None, **_):
+def estimer_final(rendements, vol, o, p, q, dist, power=None,
+                  backcast=None, rescale=False, **_):
     """
     Estime le modele GARCH final sur la serie complete.
 
@@ -830,6 +831,11 @@ def estimer_final(rendements, vol, o, p, q, dist, power=None, **_):
         Distribution des innovations ('normal', 't', 'skewt', 'ged').
     power : float or None
         Parametre delta pour APARCH/TGARCH. None ou NaN = ignore.
+    backcast : float or None
+        Valeur d'initialisation de la variance. Transmise a .fit()
+        uniquement si differente de None.
+    rescale : bool
+        Transmis a arch_model(). False = pas de reechelonnage des donnees.
     **_ :
         Parametres supplementaires ignores (permet best.to_dict() direct).
 
@@ -837,7 +843,8 @@ def estimer_final(rendements, vol, o, p, q, dist, power=None, **_):
     -------
     arch.univariate.base.ARCHModelResult
     """
-    model_kwargs = {'vol': vol, 'p': p, 'o': o, 'q': q, 'dist': dist}
+    model_kwargs = {'vol': vol, 'p': p, 'o': o, 'q': q, 'dist': dist,
+                    'rescale': rescale}
 
     try:
         if power is not None and not math.isnan(float(power)):
@@ -849,6 +856,8 @@ def estimer_final(rendements, vol, o, p, q, dist, power=None, **_):
     fit_kwargs = {'disp': 'off'}
     if est_aparch:
         fit_kwargs['options'] = {'maxiter': 500}
+    if backcast is not None:
+        fit_kwargs['backcast'] = backcast
 
     return arch_model(rendements, **model_kwargs).fit(**fit_kwargs)
 

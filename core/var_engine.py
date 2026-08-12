@@ -52,6 +52,71 @@ def tvar_historique(serie, alpha):
     return float(tail.mean()) if len(tail) > 0 else float(q)
 
 
+def var_normale(mu, sigma, alpha):
+    """
+    VaR sous hypothèse de distribution normale.
+
+    Parameters
+    ----------
+    mu : float
+        Moyenne de la distribution.
+    sigma : float
+        Écart-type de la distribution.
+    alpha : float
+        Niveau de confiance.
+
+    Returns
+    -------
+    float
+        VaR au niveau alpha (négative — convention pertes).
+    """
+    z = norm.ppf(1 - alpha)
+    return mu + z * sigma
+
+
+def var_student(mu, sigma, nu, alpha):
+    """
+    VaR sous hypothèse de distribution Student.
+
+    Parameters
+    ----------
+    mu : float
+        Moyenne de la distribution.
+    sigma : float
+        Écart-type de la distribution.
+    nu : float
+        Degrés de liberté.
+    alpha : float
+        Niveau de confiance.
+
+    Returns
+    -------
+    float
+        VaR au niveau alpha (négative — convention pertes).
+    """
+    z = t_dist.ppf(1 - alpha, df=nu)
+    return mu + z * sigma
+
+
+def var_historique(serie, alpha):
+    """
+    VaR historique (quantile empirique de la queue gauche).
+
+    Parameters
+    ----------
+    serie : array-like
+        Série des rendements.
+    alpha : float
+        Niveau de confiance (ex: 0.95).
+
+    Returns
+    -------
+    float
+        VaR au niveau alpha (négative — convention pertes).
+    """
+    return float(np.quantile(serie, 1 - alpha))
+
+
 def tvar_normale(mu, sigma, alpha):
     """
     TVaR sous hypothèse de distribution normale.
@@ -173,16 +238,18 @@ def construire_df_vol(rendements, garch_final, alpha=0.99):
     dist_name = garch_final.model.distribution.name.lower()
     nu_garch = float(params.get('nu', float('nan')))
 
+    # q_z : quantile de la loi standardisee (mu=0, sigma=1), mis a l'echelle
+    # par vol_cond plus bas.
     if dist_name == 'normal':
-        q_z = norm.ppf(1 - alpha)
+        q_z = var_normale(0.0, 1.0, alpha)
         tvar_z_sc = -norm.pdf(q_z) / (1 - alpha)
     elif dist_name == 't':
-        q_z = t_dist.ppf(1 - alpha, df=nu_garch)
+        q_z = var_student(0.0, 1.0, nu_garch, alpha)
         tvar_z_sc = -(t_dist.pdf(q_z, df=nu_garch) / (1 - alpha)) * \
                     (nu_garch + q_z**2) / (nu_garch - 1)
     else:
         z_innov = resid_std.values
-        q_z = float(np.quantile(z_innov, 1 - alpha))
+        q_z = var_historique(z_innov, alpha)
         tail_z = z_innov[z_innov <= q_z]
         tvar_z_sc = float(tail_z.mean()) if len(tail_z) > 0 else q_z
 
