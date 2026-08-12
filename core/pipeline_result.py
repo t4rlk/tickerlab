@@ -9,10 +9,10 @@ class PipelineResult:
     """Sortie structurée de run_pipeline().
 
     Interface dict-like ([], get, keys, in) pour la rétrocompatiblité avec
-    tout code qui utilisait le dict retourné par Phase 1-2.
+    tout code qui utilisait le dict retourné auparavant.
     Le champ `meta` expose les métadonnées de reproductibilité.
     """
-    # Résultats scientifiques (identiques au dict Phase 2)
+    # Résultats scientifiques (identiques au dict d'origine)
     prix: Any = None
     rendements: Any = None
     arima: Any = None
@@ -35,7 +35,7 @@ class PipelineResult:
     # (retour_detail dans backtest_oos). None par defaut : aucune regression sur les
     # sorties numeriques existantes.
     backtest_detail: Any = None
-    # Métadonnées reproductibilité (Phase 3.1)
+    # Métadonnées reproductibilité
     meta: dict = field(default_factory=dict)
 
     # ── Interface dict-like ──────────────────────────────────────────────────

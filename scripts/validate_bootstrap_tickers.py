@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Validation Phase 1.6 -- Bootstrap stationnaire express IC VaR (3 tickers).
+Validation — Bootstrap stationnaire express IC VaR (3 tickers).
 
 Tableau attendu :
   Ticker | Niveau | VaR GARCH | IC lower | IC upper | Largeur | T_eff | Temps (s)

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Stress testing scenariste — Phase 2.3.
+Stress testing scenariste.
 
 Applique des scenarios de stress hypothetiques et historiques sur un actif unique.
-Pour le stress test multi-actifs (portefeuille), voir Phase 4 (DCC-GARCH).
+Pour le stress test multi-actifs (portefeuille) : extension future (DCC-GARCH).
 
 References :
   FRTB d457 §181-185 — stress scenario methodology

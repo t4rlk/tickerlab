@@ -1,80 +1,20 @@
 # -*- coding: utf-8 -*-
-"""
-Tests Phase 1.6bis -- 3 bugs audit PDF.
+"""Tests — verdict de spécification GARCH (garch_selector.verdict_specification).
 
-Bug 1 : coherence frequence prix/rendements (resampler_prix)
-Bug 2 : verdict_specification double-verdict resume executif
-Bug 3 : rolling backtest auto-ajustement + ValidationError
+Double-verdict du résumé exécutif : gravité aucune/mineure/majeure, persistance
+des colonnes de spécification dans df_garch, et promotion mineure→majeure quand
+tous les candidats échouent la spécification.
 """
 import sys
-import warnings
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
-import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from tickerlab.core.data_loader import resampler_prix
 
-
-# ── Fixtures communes ─────────────────────────────────────────────────────────
-
-def _prix_daily(n=1000, start='2018-01-02'):
-    idx = pd.bdate_range(start=start, periods=n)
-    vals = 50 + np.cumsum(np.random.default_rng(0).normal(0, 0.5, n))
-    return pd.DataFrame({'prix': vals}, index=idx)
-
-
-# ── Bug 1 : coherence n_obs entre prix_stats et rendements ───────────────────
-
-def test_coherence_n_obs_freq_weekly():
-    """
-    Avec freq='weekly', resampler_prix reduit le DataFrame de prix ;
-    len(prix_stats) doit etre compatible avec len(rendements) calcules en weekly.
-    """
-    from tickerlab.core.data_loader import calculer_rendements
-
-    prix = _prix_daily(n=1000)
-    prix_stats  = resampler_prix(prix, freq='weekly')
-    rendements  = calculer_rendements(prix, freq='weekly')
-
-    # rendements = diff(prix_stats) -> len(rendements) == len(prix_stats) - 1
-    assert len(prix_stats) > 0, "resampler_prix retourne DataFrame vide"
-    assert abs(len(prix_stats) - len(rendements)) <= 1, (
-        f"Incoherence : {len(prix_stats)} prix stats vs {len(rendements)} rendements weekly "
-        f"(ecart > 1 inattendu)"
-    )
-
-
-def test_resampler_daily_ne_change_rien():
-    """freq='daily' ne modifie pas le DataFrame."""
-    prix = _prix_daily(n=200)
-    result = resampler_prix(prix, freq='daily')
-    assert len(result) == len(prix), "resampler_prix daily a modifie la taille"
-    assert result is prix, "resampler_prix daily devrait retourner l'objet original"
-
-
-def test_resampler_weekly_reduit_obs():
-    """freq='weekly' produit environ n//5 observations (semaines de travail)."""
-    prix = _prix_daily(n=500)
-    result = resampler_prix(prix, freq='weekly')
-    # 500 jours ouvres ~ 100 semaines; on accepte entre 80 et 115
-    assert 80 <= len(result) <= 115, (
-        f"resampler_prix weekly : {len(result)} obs inattendu pour 500 jours ouvres"
-    )
-
-
-def test_resampler_monthly_reduit_obs():
-    """freq='monthly' produit environ n//22 observations."""
-    prix = _prix_daily(n=500)
-    result = resampler_prix(prix, freq='monthly')
-    assert 18 <= len(result) <= 26, (
-        f"resampler_prix monthly : {len(result)} obs inattendu pour 500 jours ouvres"
-    )
-
-
-# ── Bug 2 : verdict_specification ────────────────────────────────────────────
+# ── Fixtures ──────────────────────────────────────────────────────────────────
 
 def _best_dict_avec_pvals(lb_z=0.8, lb_z2=0.7, engle=0.6,
                           aic=1000.0, p=1, o=0, q=1,
@@ -97,6 +37,8 @@ def _df_garch_simple(best_aic=1000.0, n=3, tous_passent=True):
 def _cfg():
     return {'garch': {'seuil_significativite': 0.05, 'tolerance_delta_critere_brut': 4.0}}
 
+
+# ── Tests ─────────────────────────────────────────────────────────────────────
 
 def test_verdict_specification_spec_ok():
     """Tous les p-values > 0.05 -> gravite='aucune'."""
@@ -292,53 +234,3 @@ def test_verdict_pas_de_promotion_si_seul_modele_echoue():
     v = verdict_specification(best, df, _cfg())
     assert v['all_candidates_failed_spec'] is False
     assert v['gravite'] == 'mineure'
-
-
-# ── Bug 3 : rolling backtest validation ──────────────────────────────────────
-
-def _serie_courte(n=300, seed=7):
-    rng = np.random.default_rng(seed)
-    return pd.Series(rng.normal(0, 1, n) * 0.5,
-                     index=pd.bdate_range('2020-01-02', periods=n))
-
-
-def _best_garch():
-    return {'vol': 'Garch', 'p': 1, 'o': 0, 'q': 1, 'dist': 'normal',
-            'modele': 'GARCH'}
-
-
-def _cfg_rolling(window=1000, enabled=True):
-    return {
-        'rolling_backtest': {
-            'enabled':    enabled,
-            'window_size': window,
-            'refit_every': 22,
-            'niveaux_test': [0.95, 0.99],
-        }
-    }
-
-
-def test_rolling_window_impossible_raises():
-    """window_size >= n_total -> ValueError."""
-    from tickerlab.core.backtest_rolling import backtest_rolling_var
-    serie = _serie_courte(n=300)
-    with pytest.raises(ValueError, match='rolling_backtest impossible'):
-        backtest_rolling_var(serie, _best_garch(), _cfg_rolling(window=350))
-
-
-def test_rolling_window_auto_ajustement():
-    """window trop proche de n_total -> UserWarning + auto-ajustement (pas d'erreur)."""
-    from tickerlab.core.backtest_rolling import backtest_rolling_var
-    serie = _serie_courte(n=400)
-    cfg   = _cfg_rolling(window=370)  # 400 - 370 = 30 < min_oos=50 -> auto-ajustement
-    with pytest.warns(UserWarning, match='Auto-ajustement'):
-        df_viol, df_params, stats = backtest_rolling_var(serie, _best_garch(), cfg)
-    assert isinstance(df_viol, pd.DataFrame), "df_violations doit etre un DataFrame"
-
-
-def test_validation_config_runtime_split_trop_petit():
-    """split_ratio laissant < 50 OOS -> UserWarning (via config_validation.valider_config)."""
-    from tickerlab.core.config_validation import valider_config
-    cfg = {'backtest': {'split_ratio': 0.99}, 'rolling_backtest': {'enabled': False}}
-    with pytest.warns(UserWarning, match='split_ratio'):
-        valider_config(cfg, n_obs=200)

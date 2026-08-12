@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests Phase 1.3 — Component GARCH (Engle & Lee 1999).
+"""Tests — Component GARCH (Engle & Lee 1999).
 
 Couvre :
 1. Contraintes Engle-Lee vérifiées après estimation (C1, C2, C3)

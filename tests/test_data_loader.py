@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Tests Phase 8 — Robustesse d'entrée (data_loader).
+Tests — Robustesse d'entrée et rééchantillonnage (data_loader).
 
-Conditions testées :
+Robustesse (valider_donnees) :
   R1 : série trop courte (< min_observations) => DataError
   R2 : trop de NaN dans les prix (> max_nan_ratio) => DataError
   R3 : prix <= 0 détectés => DataError
   R4 : série quasi constante (std ~0) => DataError
   R5 : non-régression — série propre de 800 obs ne lève rien
-  R6 : config.yaml avec nouvelles clés data passe le schéma Pydantic Phase 7
+  R6 : config.yaml avec nouvelles clés data passe le schéma Pydantic
   R7 : telecharger_prix lève DataError (et non ValueError) sur DataFrame vide
+
+Rééchantillonnage (resampler_prix / calculer_rendements) :
+  cohérence n_obs prix/rendements en weekly, invariance en daily,
+  réduction attendue en weekly/monthly.
 """
 import sys
 from pathlib import Path
@@ -22,7 +26,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from tickerlab.core.data_loader import valider_donnees
+from tickerlab.core.data_loader import valider_donnees, resampler_prix
 from tickerlab.core.exceptions import DataError
 
 
@@ -195,3 +199,57 @@ def test_telecharger_prix_leve_dataerror_sur_vide():
             telecharger_prix('FAKE', '2020-01-01', '2021-01-01')
     assert exc_info.value.etape == 'download'
     assert exc_info.value.ticker == 'FAKE'
+
+
+# ── Rééchantillonnage de fréquence (resampler_prix) ──────────────────────────
+
+def _prix_daily(n=1000, start='2018-01-02'):
+    idx = pd.bdate_range(start=start, periods=n)
+    vals = 50 + np.cumsum(np.random.default_rng(0).normal(0, 0.5, n))
+    return pd.DataFrame({'prix': vals}, index=idx)
+
+
+def test_coherence_n_obs_freq_weekly():
+    """
+    Avec freq='weekly', resampler_prix reduit le DataFrame de prix ;
+    len(prix_stats) doit etre compatible avec len(rendements) calcules en weekly.
+    """
+    from tickerlab.core.data_loader import calculer_rendements
+
+    prix = _prix_daily(n=1000)
+    prix_stats  = resampler_prix(prix, freq='weekly')
+    rendements  = calculer_rendements(prix, freq='weekly')
+
+    # rendements = diff(prix_stats) -> len(rendements) == len(prix_stats) - 1
+    assert len(prix_stats) > 0, "resampler_prix retourne DataFrame vide"
+    assert abs(len(prix_stats) - len(rendements)) <= 1, (
+        f"Incoherence : {len(prix_stats)} prix stats vs {len(rendements)} rendements weekly "
+        f"(ecart > 1 inattendu)"
+    )
+
+
+def test_resampler_daily_ne_change_rien():
+    """freq='daily' ne modifie pas le DataFrame."""
+    prix = _prix_daily(n=200)
+    result = resampler_prix(prix, freq='daily')
+    assert len(result) == len(prix), "resampler_prix daily a modifie la taille"
+    assert result is prix, "resampler_prix daily devrait retourner l'objet original"
+
+
+def test_resampler_weekly_reduit_obs():
+    """freq='weekly' produit environ n//5 observations (semaines de travail)."""
+    prix = _prix_daily(n=500)
+    result = resampler_prix(prix, freq='weekly')
+    # 500 jours ouvres ~ 100 semaines; on accepte entre 80 et 115
+    assert 80 <= len(result) <= 115, (
+        f"resampler_prix weekly : {len(result)} obs inattendu pour 500 jours ouvres"
+    )
+
+
+def test_resampler_monthly_reduit_obs():
+    """freq='monthly' produit environ n//22 observations."""
+    prix = _prix_daily(n=500)
+    result = resampler_prix(prix, freq='monthly')
+    assert 18 <= len(result) <= 26, (
+        f"resampler_prix monthly : {len(result)} obs inattendu pour 500 jours ouvres"
+    )

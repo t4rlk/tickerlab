@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests Phase 3.3-B : CLI tickerlab + pyproject.toml.
+"""Tests — CLI tickerlab + pyproject.toml.
 
 Tests :
   1. tickerlab --version (appel direct main(), sans subprocess)

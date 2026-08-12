@@ -853,7 +853,7 @@ def estimer_final(rendements, vol, o, p, q, dist, power=None, **_):
     return arch_model(rendements, **model_kwargs).fit(**fit_kwargs)
 
 
-# ── Verdict specification (Phase 1.6bis Bug 2) ───────────────────────────────
+# ── Verdict specification───────────────────────────────
 
 def verdict_specification(best_dict: dict, df_garch: 'pd.DataFrame',
                           config: dict) -> dict:

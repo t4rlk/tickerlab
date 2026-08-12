@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Point d'entree CLI tickerlab (Phase 3.3).
+"""Point d'entree CLI tickerlab.
 
 Sous-commandes :
   tickerlab analyze  --ticker BZ=F --frequency weekly [--config ...] [--no-ai] [--force-refresh]
@@ -185,7 +185,7 @@ def cmd_stress(args: argparse.Namespace) -> None:
     config['data']['ticker']    = args.ticker
     config['data']['frequency'] = args.frequency
 
-    # Phase 1 : pipeline complet (HIT cache si disponible)
+    # Etape 1 : pipeline complet (HIT cache si disponible)
     print(f'[stress] Execution pipeline {args.ticker}/{args.frequency}...')
     result = run_pipeline(config, verbosity='quiet')
 
@@ -221,7 +221,7 @@ def cmd_stress(args: argparse.Namespace) -> None:
         except Exception:
             pass
 
-    # Phase 2 : application du scenario
+    # Etape 2 : application du scenario
     scenarios = args.scenario if isinstance(args.scenario, list) else [args.scenario]
     for sc in scenarios:
         print(f'\n[stress] Scenario : {sc}')

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests Phase 4.1 — Ruptures structurelles ICSS (Condition 3).
+Tests — Ruptures structurelles ICSS (Condition 3).
 
 5 tests :
   1. mode='diagnostic' retourne un dict valide

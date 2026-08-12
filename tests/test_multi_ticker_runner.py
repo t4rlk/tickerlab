@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests Phase 2.1 — Runner multi-tickers.
+Tests — Runner multi-tickers.
 
 4 tests < 30s total (run_pipeline mocke au niveau du runner).
 

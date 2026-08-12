@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Runner multi-tickers Phase 2.1 — validation croisee des actifs.
+Runner multi-tickers — validation croisee des actifs.
 
 Modes :
   --metrics-only (defaut)  Metriques uniquement, sans generation de fichiers.
@@ -51,7 +51,7 @@ FREQUENCES_DEFAUT = ['daily', 'weekly']
 TICKERS_QUICK = ['BZ=F', '^GSPC', 'EURUSD=X']
 FREQUENCES_QUICK = ['weekly']
 
-# Grid GARCH reduit Phase 2.1 (3 modeles x 2 distributions x p,q=1 = 9 fits/run)
+# Grid GARCH reduit (3 modeles x 2 distributions x p,q=1 = 9 fits/run)
 _GARCH_OVERRIDE = {
     'modeles':       ['GARCH', 'GJR-GARCH', 'EGARCH'],
     'distributions': ['normal', 't'],

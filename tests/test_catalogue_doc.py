@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests Phase 2.2 — Catalogue des cas pathologiques.
+Tests — Catalogue des cas pathologiques.
 
 3 tests structurels sur docs/CAS_PATHOLOGIQUES.md :
   Test 1 : presence du fichier + 4 categories requises

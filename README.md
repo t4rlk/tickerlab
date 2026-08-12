@@ -81,9 +81,9 @@ copy .env.example .env     # Windows
 **En ligne de commande**
 
 ```bash
-python main.py --ticker BZ=F --debut 2006-01-01 --fin 2024-12-31      # Brent
-python main.py --ticker ^GSPC --debut 2010-01-01 --fin 2024-12-31     # S&P 500
-python main.py --ticker EURUSD=X --debut 2015-01-01 --fin 2024-12-31  # EUR/USD
+tickerlab run BZ=F --from 2006-01-01 --to 2024-12-31       # Brent
+tickerlab run ^GSPC --from 2010-01-01 --to 2024-12-31      # S&P 500
+tickerlab run EURUSD=X --from 2015-01-01 --to 2024-12-31   # EUR/USD
 ```
 
 Le rapport PDF est généré dans `resultats/`.
@@ -94,7 +94,7 @@ Le rapport PDF est généré dans `resultats/`.
 tickerlab-web
 ```
 
-Configurateur accessible sur `http://localhost:8000` : paramétrage de l'analyse, exécution, et rapport PDF téléchargeable.
+Configurateur accessible sur `http://localhost:8742` : paramétrage de l'analyse, exécution, et rapport PDF téléchargeable.
 
 ## Architecture
 

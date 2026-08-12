@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Reverse stress testing — Phase 2.3.
+Reverse stress testing.
 
 Pour un actif unique : identifie le choc minimal (au sens de Mahalanobis)
 qui produit une perte cible donnee.
 
-Pour le cas multi-actifs (portefeuille), voir Phase 4.
+Pour le cas multi-actifs (portefeuille) : extension future.
 
 References :
   Studer G. (1997) — Maximum loss for measurement of market risk

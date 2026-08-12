@@ -934,7 +934,7 @@ def section_8(rendements: pd.Series, garch_final, df_var_tvar: pd.DataFrame,
             _warn(f'Section 8.7 rolling table : {e}')
             story.append(_p(f'Table rolling indisponible : {e}'))
 
-    # ── 8.8 Comparaison statistique DM + GK (Phase 1.5) ─────────────────────
+    # ── 8.8 Comparaison statistique DM + GK─────────────────────
     _dmgk = dm_gk_result or {}
     try:
         story.extend(_page_break_if(config))

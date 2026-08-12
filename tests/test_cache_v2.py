@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests Phase 3.2 — Cache versionne par etape.
+Tests — Cache versionne par etape.
 
 11 tests unitaires, aucun appel reseau ni GARCH reel.
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests Phase 1.4 — FHS (Filtered Historical Simulation, Barone-Adesi et al. 1999).
+Tests — FHS (Filtered Historical Simulation, Barone-Adesi et al. 1999).
 
 6 tests couvrant :
   1. Monotonicité VaR en alpha (sanity check)

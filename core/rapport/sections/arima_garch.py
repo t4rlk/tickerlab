@@ -582,7 +582,7 @@ def section_5(prix: pd.Series, arima_result: dict, config: dict,
         '(3) validation sur les residus (bruit blanc, normalite, absence d\'effet ARCH).'
     ))
 
-    # 5.0 Encadre pedagogique — interpretation economique (Phase 1.1)
+    # 5.0 Encadre pedagogique — interpretation economique
     msg_ped  = arima_result.get('message_pedagogique', '')
     code_int = arima_result.get('interpretation', '')
     if msg_ped:
@@ -890,7 +890,7 @@ def _fig_component_decomposition(cg: dict, config: dict):
 
 def _encadre_component_garch(cg: dict, config: dict) -> list:
     """
-    Encadré synthétique Component GARCH (Phase 1.3).
+    Encadré synthétique Component GARCH.
 
     Affiche le tableau paramètres + figure superposée σ_t / √q_t.
     Retourne [] si cg est None ou vide.
@@ -940,7 +940,7 @@ def _encadre_component_garch(cg: dict, config: dict) -> list:
 
 def _encadre_igarch(igarch_diagnostic: dict, config: dict) -> list:
     """
-    Encadré d'alerte IGARCH thème-adaptatif (Phase 1.2).
+    Encadré d'alerte IGARCH thème-adaptatif.
 
     Apparaît uniquement si ``code in ('near_igarch', 'igarch_strict')``.
     Pour ``'mean_reverting'``, retourne une seule ligne de texte (pas de box).
@@ -1029,8 +1029,8 @@ def section_6(rendements: pd.Series, df_garch: pd.DataFrame,
     garch_final            : ARCHModelResult  Modele final estime.
     modele_nom             : str         Nom du modele retenu (ex: 'GJR-GARCH').
     config                 : dict
-    igarch_diagnostic      : dict, optional  Resultat diagnostiquer_igarch() (Phase 1.2).
-    component_garch_result : dict, optional  Resultat estimer_component_garch() (Phase 1.3).
+    igarch_diagnostic      : dict, optional  Resultat diagnostiquer_igarch().
+    component_garch_result : dict, optional  Resultat estimer_component_garch().
     """
     story = []
     lags  = config.get('sorties_etendues', {}).get('correlogramme_lags', 36)
@@ -1120,13 +1120,13 @@ def section_6(rendements: pd.Series, df_garch: pd.DataFrame,
     except Exception as e:
         _warn(f'Section 6 coefs GARCH : {e}')
 
-    # ── Diagnostic IGARCH (Phase 1.2) ─────────────────────────────────────────
+    # ── Diagnostic IGARCH ─────────────────────────────────────────
     if igarch_diagnostic:
         story.extend(_encadre_igarch(igarch_diagnostic, config))
     else:
         story.append(_spacer(0.5))
 
-    # ── Component GARCH (Phase 1.3) ───────────────────────────────────────────
+    # ── Component GARCH ───────────────────────────────────────────
     if component_garch_result:
         story.extend(_encadre_component_garch(component_garch_result, config))
 

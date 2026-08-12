@@ -202,7 +202,7 @@ def _executer_job(job: Job) -> None:
     pipeline_logger.addHandler(handler)
     try:
         config = construire_config(job.payload, dossier)
-        valider_config_structure(config)           # garde-fou structure (Phase 7)
+        valider_config_structure(config)           # garde-fou structure
 
         result = run_pipeline(config)              # pipeline réel, inchangé
 
@@ -296,7 +296,7 @@ def telecharger_figure(job_id: str, name: str) -> FileResponse:
 
 
 # ── API v1 ────────────────────────────────────────────────────────────────────
-# Surface canonique conforme aux contrats du cahier des charges. /api/run* reste
+# Surface canonique conforme au contrat de l'API v1. /api/run* reste
 # disponible en alias legacy (front + tests existants) ; toute la logique lourde
 # (pipeline, localisation PDF) est réutilisée via les helpers ci-dessus.
 

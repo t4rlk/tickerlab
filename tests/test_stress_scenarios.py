@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests Phase 2.3 — Stress testing scenariste + reverse stress.
+Tests — Stress testing scenariste + reverse stress.
 
 9 tests < 5s (pas d'appel reseau ni GARCH reel).
 
@@ -210,11 +210,11 @@ def test_perte_proportionnelle_horizon():
     assert r_avec_fhs['multiple_var99_fhs'] == pytest.approx(0.08 / 0.018, rel=1e-3)
 
 
-# ── Test 5 : couverture des actifs Phase 2.1 ─────────────────────────────────
+# ── Test 5 : couverture des actifs ─────────────────────────────────
 
 def test_couverture_actifs_phase21():
     """
-    Les 3 tickers de reference Phase 2.1 ont chacun au moins 1 scenario applicable.
+    Les 3 tickers de reference ont chacun au moins 1 scenario applicable.
     BZ=F : oil_shock_2022 et covid_march_2020 attendus.
     ^GSPC : covid_march_2020, fed_hike_2022, geopolitique_taiwan attendus.
     EURUSD=X : fed_hike_2022 attendu (seul scenario FX inclus).

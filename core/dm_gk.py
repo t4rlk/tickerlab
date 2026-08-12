@@ -12,7 +12,7 @@ Tests implementes :
            du DM associe.
 
 Choix de GK 2005 vs GW 2006 :
-    Le cahier des charges specifie explicitement Giacomini & Komunjer (2005,
+    La méthodologie retient explicitement Giacomini & Komunjer (2005,
     JBES 23:4) — test concu pour la comparaison de previsions de quantiles
     (= VaR directement), avec la perte tick comme scoring rule.
     Note : avec Z_t = [1, d_{t-1}] uniquement, GK 2005 est asymptotiquement
@@ -398,7 +398,7 @@ def build_var_series(rendements, garch_final, fhs_result: Optional[dict],
     ----------
     rendements  : pd.Series  Log-rendements complets (train + test).
     garch_final : ARCHModelResult  Estime sur le TRAIN uniquement.
-    fhs_result  : dict|None  Resultat de calculer_var_fhs (Phase 1.4).
+    fhs_result  : dict|None  Resultat de calculer_var_fhs.
     config      : dict  Config globale (lit backtest.split_ratio, var.niveaux).
     T_train     : int|None  Si None, recalcule depuis split_ratio.
 
@@ -411,7 +411,7 @@ def build_var_series(rendements, garch_final, fhs_result: Optional[dict],
         Methode | Niveau | var_series | viol_series
     (var_series et viol_series sont les arrays internes equivalents stockes ici
      sous forme de dict — pas dans df_bt pour eviter toute modification de
-     backtest.py, conformement a l'exigence d'isolation Phase 1.4.)
+     backtest.py, conformement a l'exigence d'isolation.)
     """
     from scipy.stats import norm as sp_norm, t as sp_t
     from .fhs import fhs_var_oos

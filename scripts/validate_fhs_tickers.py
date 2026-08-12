@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Validation Phase 1.4 — FHS sur 3 tickers (BZ=F, ^GSPC, EURUSD=X).
+Validation — FHS sur 3 tickers (BZ=F, ^GSPC, EURUSD=X).
 
 Table :
   Ticker | n_boot | H=1 VaR_99 FHS | H=22 VaR_99 FHS | H=22 VaR_99 sqrt(H) |

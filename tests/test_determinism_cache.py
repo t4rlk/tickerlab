@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests Phase 6 — Intégrité : déterminisme prouvé + atomicité cache.
+Tests — Intégrité : déterminisme prouvé + atomicité cache.
 
 Tests :
   B1 : FHS VaR reproductible — run1 == run2 (np.array_equal / ==)

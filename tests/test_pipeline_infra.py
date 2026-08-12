@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests Phase 3.1 — API industrialisee.
+Tests — API industrialisee.
 
 8 tests unitaires, aucun appel reseau ni GARCH reel.
 
@@ -9,7 +9,7 @@ Test 2 : config_hash cles scientifiques   -> hash stable, exclut output/cache/ai
 Test 3 : valider_config OK                -> aucune exception
 Test 4 : valider_config raise             -> ValidationError si window >= n_obs
 Test 5 : PipelineResult dict-like         -> [] get keys in, champ meta present
-Test 6 : PipelineResult retrocompat       -> acces comme dict Phase 2
+Test 6 : PipelineResult retrocompat       -> acces comme dict
 Test 7 : setup_tickerlab_logger idempotent -> 1 handler apres 2 appels, niveau ajuste
 Test 8 : run_multi_ticker 35 colonnes     -> _COLONNES_CSV contient config_hash
 """
@@ -186,11 +186,11 @@ def test_pipeline_result_dict_like():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Test 6 — PipelineResult : rétrocompatibilité dict Phase 2
+# Test 6 — PipelineResult : rétrocompatibilité dict
 # ─────────────────────────────────────────────────────────────────────────────
 
 def test_pipeline_result_retrocompat():
-    """Les 17 cles Phase 2 sont toutes accessibles via [] comme un dict."""
+    """Les 17 cles sont toutes accessibles via [] comme un dict."""
     import pandas as pd
 
     _fake_df = pd.DataFrame()
@@ -253,7 +253,7 @@ def test_runner_35_colonnes():
     assert len(_COLONNES_CSV) == 35, \
         f'{len(_COLONNES_CSV)} colonnes trouvees, 35 attendues'
     assert 'config_hash' in _COLONNES_CSV
-    # Colonnes critiques Phase 2 toujours presentes
+    # Colonnes critiques toujours presentes
     for col in ('ticker', 'var99_garch', 'var99_garch_floored',
                  'garch_modele', 'persistance', 'erreur'):
         assert col in _COLONNES_CSV, f'Colonne manquante : {col}'

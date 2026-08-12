@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests d'intégration cross-sous-tâches Phase 1 (smoke test pré-merge).
+Tests d'intégration cross-modules (smoke test pré-merge).
 
 Distinct des test_phase1X.py qui testent chaque sous-tâche isolément.
 Ce fichier valide les ENCHAÎNEMENTS : 1.1→1.2, 1.2→1.3, 1.4→1.5.
@@ -69,21 +69,21 @@ def _cfg_pipeline_minimal():
 
 @pytest.fixture(scope='module')
 def serie_bruit_blanc():
-    """500 obs iid N(0,1), seed=42 — Phase 1.1 martingale."""
+    """500 obs iid N(0,1), seed=42 — martingale."""
     rng = np.random.default_rng(42)
     return _to_series(rng.standard_normal(500))
 
 
 @pytest.fixture(scope='module')
 def serie_near_igarch():
-    """GARCH(1,1) ω=0.05 α=0.10 β=0.89, seed=2 → fitted pers≈0.99 — Phase 1.2→1.3."""
+    """GARCH(1,1) ω=0.05 α=0.10 β=0.89, seed=2 → fitted pers≈0.99."""
     r = _sim_garch11(omega=0.05, alpha=0.10, beta=0.89, n=600, seed=2)
     return _to_series(r)
 
 
 @pytest.fixture(scope='module')
 def serie_garch_simple():
-    """GARCH(1,1) ω=0.20 α=0.05 β=0.90, seed=42 → pers≈0.95 — Phase 1.4→1.5."""
+    """GARCH(1,1) ω=0.20 α=0.05 β=0.90, seed=42 → pers≈0.95."""
     r = _sim_garch11(omega=0.20, alpha=0.05, beta=0.90, n=500, seed=42)
     return _to_series(r)
 
@@ -118,7 +118,7 @@ def pipeline_garch_simple(serie_garch_simple):
     return best_d, garch_final, config
 
 
-# ── Test 1 — Phase 1.1 : bruit blanc → martingale ───────────────────────────
+# ── Test 1 : bruit blanc → martingale ───────────────────────────
 
 def test_arima_interpretation_martingale(serie_bruit_blanc):
     """
@@ -152,14 +152,14 @@ def test_arima_interpretation_martingale(serie_bruit_blanc):
     )
 
 
-# ── Test 2 — Phase 1.2 : diagnostic IGARCH post-hoc ─────────────────────────
+# ── Test 2 : diagnostic IGARCH post-hoc ─────────────────────────
 
 def test_igarch_diagnostic_post_hoc(pipeline_near_igarch):
     """
-    Phase 1.2 adapté : diagnostiquer_igarch() sur série near-IGARCH
+    Diagnostic post-hoc : diagnostiquer_igarch() sur série near-IGARCH
     retourne near_igarch=True + code str + half_life_periodes float > 0.
 
-    L'IGARCH n'est plus dans la grille (Phase 1.2 = diagnostic post-hoc).
+    L'IGARCH n'est plus dans la grille (diagnostic post-hoc).
     Ce test vérifie le contrat API de diagnostiquer_igarch().
     """
     from tickerlab.core.igarch_diagnostic import diagnostiquer_igarch
@@ -191,11 +191,11 @@ def test_igarch_diagnostic_post_hoc(pipeline_near_igarch):
     )
 
 
-# ── Test 3 — Phase 1.3 : Component GARCH convergence ─────────────────────────
+# ── Test 3 : Component GARCH convergence ─────────────────────────
 
 def test_component_garch_convergence():
     """
-    Phase 1.3 : série simulée Component GARCH (ω=0.1, ρ=0.97, φ=0.05,
+    Série simulée Component GARCH (ω=0.1, ρ=0.97, φ=0.05,
     α=0.05, β=0.85, ν=8) → ρ estimé dans [0.97 ± 25%] ET C3 respectée (α+β < ρ).
 
     Tolérance 25% : multi-start SLSQP + 500 obs → convergence locale possible.
@@ -262,11 +262,11 @@ def test_component_garch_convergence():
     )
 
 
-# ── Test 4 — Phase 1.4 : FHS vs GARCH paramétrique ──────────────────────────
+# ── Test 4 : FHS vs GARCH paramétrique ──────────────────────────
 
 def test_fhs_vs_garch_parametrique(pipeline_garch_simple, serie_garch_simple):
     """
-    Phase 1.4 : VaR FHS et GARCH paramétrique du même ordre à H=1.
+    VaR FHS et GARCH paramétrique du même ordre à H=1.
 
     |VaR_FHS - VaR_GARCH| / |VaR_GARCH| < 30% aux niveaux 95% et 99%.
     Vérifie la cohérence entre simulation bootstrap et VaR conditionnelle.
@@ -319,7 +319,7 @@ def test_fhs_vs_garch_parametrique(pipeline_garch_simple, serie_garch_simple):
         )
 
 
-# ── Test 5 — Phase 1.5 : symétrie DM ─────────────────────────────────────────
+# ── Test 5 : symétrie DM ─────────────────────────────────────────
 
 def test_dm_gk_symmetrie(serie_garch_simple):
     """
@@ -357,7 +357,7 @@ def test_dm_gk_symmetrie(serie_garch_simple):
     )
 
 
-# ── Test 6 — Phase 1.6 : bootstrap express IC contient VaR GARCH ─────────────
+# ── Test 6 : bootstrap express IC contient VaR GARCH ─────────────
 
 def test_bootstrap_express_taille_ic():
     """

@@ -30,7 +30,7 @@ def valider_config(config: dict, n_obs: int) -> None:
     Lève ValidationError si un paramètre est physiquement incompatible avec
     la série. Émet UserWarning pour les cas dégradés mais acceptables.
 
-    Remplace _valider_config_runtime() de main.py (Phase 3.1).
+    Remplace _valider_config_runtime() de main.py.
     """
     from .exceptions import ValidationError
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests Phase 1.2 — Diagnostic IGARCH post-hoc.
+"""Tests — Diagnostic IGARCH post-hoc.
 
 Couvre :
 - diagnostiquer_igarch() : 3 codes + demi-vie + Wald

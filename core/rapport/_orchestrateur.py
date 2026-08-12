@@ -323,7 +323,7 @@ def generer_pdf_unique(
     # Prix a la frequence d'analyse (pour stats sections 1.2/2.x/3.x)
     _prix_stats = prix_stats if prix_stats is not None else prix
 
-    # Verdict specification (Bug 2 Phase 1.6bis)
+    # Verdict specification
     _spec_verdict = None
     if best is not None:
         try:

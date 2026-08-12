@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests Phase 1.6 -- Bootstrap stationnaire express IC VaR conditionnel.
+Tests — Bootstrap stationnaire express IC VaR conditionnel.
 
 5 tests :
   1. Reproductibilite : meme seed -> IC identiques

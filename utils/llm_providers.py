@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Abstraction multi-providers LLM (Phase 3.3).
+"""Abstraction multi-providers LLM.
 
 SECURITE : aucune cle API n'est jamais stockee dans ce module.
 config['ai_writer']['env_key'] contient uniquement le NOM de la variable
@@ -79,7 +79,7 @@ def _retry_after_s(exc) -> Optional[int]:
 
 
 class AnthropicProvider:
-    """Provider Anthropic via SDK officiel (comportement Phase 3.2 preserve)."""
+    """Provider Anthropic via SDK officiel (comportement preserve)."""
 
     def __init__(self, modele: str, env_key: str = 'ANTHROPIC_API_KEY') -> None:
         self._modele = modele
@@ -203,7 +203,7 @@ def fabriquer_provider(config: dict) -> LLMProvider:
         max_tokens: 4000
     """
     cfg = config.get('ai_writer', {})
-    # Fallback retrocompatible : config['ai']['model'] existait en Phase 2
+    # Fallback retrocompatible : config['ai']['model'] existait auparavant
     fournisseur = str(cfg.get('fournisseur', 'anthropic')).lower()
 
     if fournisseur == 'anthropic':

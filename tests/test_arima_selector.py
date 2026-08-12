@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests Phase 1.1 — Interprétation pédagogique ARIMA.
+"""Tests — Interprétation pédagogique ARIMA.
 
 Couvre :
 - _determiner_interpretation() : les 4 catégories + garde n < 100
@@ -119,7 +119,7 @@ def test_interpretation_retrocompatibilite():
     assert 'motif_selection' in result and isinstance(result['motif_selection'], str)
     assert 'fiabilite' in result and isinstance(result['fiabilite'], bool)
 
-    # Nouvelles clés Phase 1.1 présentes et non vides
+    # Nouvelles clés présentes et non vides
     assert 'interpretation' in result
     assert 'message_pedagogique' in result
     assert 'lb_pval_rendements' in result

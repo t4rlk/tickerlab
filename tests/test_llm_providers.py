@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests Phase 3.3-A : abstraction LLM providers + defense anti-hallucination.
+"""Tests — abstraction LLM providers + defense anti-hallucination.
 
 Tests :
   1. fabriquer_provider retourne AnthropicProvider par defaut

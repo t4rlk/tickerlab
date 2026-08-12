@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Validation Phase 1.5 -- DM + GK sur 3 tickers (BZ=F, ^GSPC, EURUSD=X).
+Validation — DM + GK sur 3 tickers (BZ=F, ^GSPC, EURUSD=X).
 
 Tableau attendu :
   Ticker | Paire | alpha | DM stat | DM p-val | GK stat | GK p-val | Verdict

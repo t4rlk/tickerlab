@@ -299,7 +299,7 @@ def selectionner_arima(serie_arima, d_arima, p_max=4, q_max=4,
             except Exception as exc:
                 logger.debug('Estimation random-walk BA échouée, motif inchangé : %s', exc)
 
-    # ── Phase 1.1 — Interprétation pédagogique ────────────────────────────────
+    # ── Interprétation pédagogique ────────────────────────────────
     # Ljung-Box (10 lags) sur les rendements bruts — discrimine martingale/incertain
     try:
         lb_res = acorr_ljungbox(serie_arima, lags=[10], return_df=True)
@@ -344,7 +344,7 @@ def selectionner_arima(serie_arima, d_arima, p_max=4, q_max=4,
         'aic_norm':            float(best['AIC']),   # format EViews = déjà normalisé/obs
         'motif_selection':     motif,
         'fiabilite':           motif != 'AIC_seul_AUCUN_SIG',
-        # ── Phase 1.1 ──────────────────────────────────────────────────────────
+        # ── Interprétation ──────────────────────────────────────────────────────────
         'interpretation':      interp['code'],
         'message_pedagogique': interp['message'],
         'lb_pval_rendements':  lb_pval_rendements,

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests Phase 1.5 — DM (Diebold-Mariano 1995) + GK (Giacomini-Komunjer 2005).
+Tests — DM (Diebold-Mariano 1995) + GK (Giacomini-Komunjer 2005).
 
 6 tests couvrant :
   1. tick_loss nulle a la frontiere exacte (u_t = 0)

@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 # Seuils planchers fixés ~5 points sous la couverture mesurée (2026-06-17).
-# Mesures de référence dans CHANGELOG.md Phase 9.
+# Mesures de référence dans CHANGELOG.md.
 # TODO DETTE_TECHNIQUE : core/backtest.py à 44% (< 50%) — gate désactivée,
 #   couverture à renforcer dans une phase ultérieure (tests OOS complets).
 GATES: dict[str, int] = {

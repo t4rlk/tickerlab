@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests Phase 7 — Validation Pydantic structurelle.
+Tests — Validation Pydantic structurelle.
 
 Tests :
   P0 : config.yaml de production passe sans erreur (test critique)

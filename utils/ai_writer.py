@@ -250,7 +250,7 @@ def construire_contexte(
         'ARIMA_QMAX':     str(config['arima'].get('q_max', 4)),
         'ARIMA_SEUIL':    str(int(config['arima'].get('seuil_significativite', 0.10) * 100)),
         'ARIMA_COEFS_SIG': 'Oui',
-        # ── Phase 1.1 — Interprétation pédagogique ───────────────────────────
+        # ── Interprétation pédagogique ───────────────────────────
         'ARIMA_INTERPRETATION':  str(arima_result.get('interpretation', 'incertain')),
         'ARIMA_MSG_PEDAGOGIQUE': str(arima_result.get('message_pedagogique', '')),
         'ARIMA_LB_PVAL':         _fmt(arima_result.get('lb_pval_rendements', float('nan')), 4),

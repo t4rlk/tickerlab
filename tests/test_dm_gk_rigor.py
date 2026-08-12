@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests Phase 5 — Rigueur DM-GK.
+Tests — Rigueur DM-GK.
 
 Conditions testees :
   C1 : dm_test retourne degenerate=True si var1=var2

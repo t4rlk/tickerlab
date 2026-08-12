@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Cache versionne par etape avec invalidation en cascade (Phase 3.2).
+"""Cache versionne par etape avec invalidation en cascade.
 
 Chaque etape du pipeline possede une cle independante calculee recursivement
 depuis le DAG — modifer un parametre amont invalide automatiquement tous les

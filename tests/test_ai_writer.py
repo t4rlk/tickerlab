@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests unitaires pour utils/ai_writer.py — Phase 3.3-fix2.
+"""Tests unitaires pour utils/ai_writer.py.
 
 Aucun appel réseau. Tout est mocké ou testé sur des données synthétiques.
 """

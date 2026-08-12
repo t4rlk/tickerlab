@@ -156,7 +156,7 @@ def run_pipeline(config: dict, verbosity: str = 'normal',
     logger.info('  Sorties -> %s', dossier_resultats)
     Path(dossier_resultats).mkdir(parents=True, exist_ok=True)
 
-    # ── Cache versionne par etape (Phase 3.2) ────────────────────────────────
+    # ── Cache versionne par etape────────────────────────────────
     _cache_v2_enabled = config.get('cache_v2', {}).get('enabled', True)
     _cv2 = CacheEtapes(dossier_resultats, config) if _cache_v2_enabled else None
     _meta_cache: dict = {}
@@ -286,7 +286,7 @@ def run_pipeline(config: dict, verbosity: str = 'normal',
                     best['dist'], best['AIC'], best.get('AIC_norm', float('nan')), motif)
         _t['garch'] = time.time() - _t0
 
-        # ── 3b. Diagnostic IGARCH post-hoc (Phase 1.2) ───────────────────────
+        # ── 3b. Diagnostic IGARCH post-hoc───────────────────────
         _t0 = time.time()
         _cached = _cv2.get('igarch_diag') if (_cv2 and not force_refresh) else None
         if _cached is not None:
@@ -317,7 +317,7 @@ def run_pipeline(config: dict, verbosity: str = 'normal',
                         sb_result['n_breaks'], sb_result['mode'],
                         sb_result.get('warning_lamoureux', False))
 
-        # ── 3c. Component GARCH (Phase 1.3) ──────────────────────────────────
+        # ── 3c. Component GARCH──────────────────────────────────
         _t0 = time.time()
         _cached = _cv2.get('component_garch') if (_cv2 and not force_refresh) else None
         if _cached is not None:
@@ -338,7 +338,7 @@ def run_pipeline(config: dict, verbosity: str = 'normal',
                         component_garch_r['alpha'] + component_garch_r['beta'],
                         component_garch_r['nu'], component_garch_r['aic'])
 
-        # ── 3d. FHS — Filtered Historical Simulation (Phase 1.4) ─────────────
+        # ── 3d. FHS — Filtered Historical Simulation─────────────
         _split_ratio = config.get('backtest', {}).get('split_ratio', 0.70)
         T_train      = int(len(rendements.dropna()) * _split_ratio)
         T_eff_dyn    = len(rendements.dropna()) - T_train
@@ -360,7 +360,7 @@ def run_pipeline(config: dict, verbosity: str = 'normal',
             logger.info('  [FHS] H=1 VaR_99=%.4f%%  H=22 VaR_99=%.4f%%  iid_ok=%s  n_boot=%s\n',
                         v1, v22, fhs_r['residus_iid_ok'], fhs_r['n_boot'])
 
-        # ── 3e. DM + GK — Comparaison statistique VaR (Phase 1.5) ───────────
+        # ── 3e. DM + GK — Comparaison statistique VaR───────────
         # Dependances : garch + fhs (pas backtest — dm_gk s'execute avant backtest_oos)
         _t0 = time.time()
         _cached = _cv2.get('dm_gk') if (_cv2 and not force_refresh) else None
@@ -415,7 +415,7 @@ def run_pipeline(config: dict, verbosity: str = 'normal',
             _meta_cache['var'] = 'MISS'
         _t['var'] = time.time() - _t0
 
-        # ── 4b. Bootstrap express IC VaR (Phase 1.6) ─────────────────────────
+        # ── 4b. Bootstrap express IC VaR─────────────────────────
         boot_cfg = config.get('bootstrap', {})
         if bool(boot_cfg.get('express', False)) or bool(boot_cfg.get('enabled', False)):
             try:
