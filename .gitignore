@@ -46,3 +46,63 @@ dev/
 .coverage
 coverage.json
 coverage.xml
+
+
+!docs/img/
+!docs/img/*.png
+
+# LaTeX
+*.aux
+*.bcf
+*.fls
+*.out
+*.toc
+*.run.xml
+*.synctex.gz
+*.fdb_latexmk
+*.blg
+*.bbl
+
+# Donnees et sorties
+outputs/
+cache/
+*.pkl
+*.parquet
+*.xlsx
+
+# Web
+node_modules/
+
+# Sessions Claude Code
+CLAUDE.md
+.claude/
+prompts/
+INSTRUCTION_*.md# LaTeX
+*.aux
+*.bcf
+*.fls
+*.out
+*.toc
+*.run.xml
+*.synctex.gz
+*.fdb_latexmk
+*.blg
+*.bbl
+
+# Donnees et sorties
+outputs/
+cache/
+*.pkl
+*.parquet
+*.xlsx
+
+# Web
+node_modules/
+
+# Sessions Claude Code
+CLAUDE.md
+.claude/
+prompts/
+INSTRUCTION_*.mdCopy-Item "dev\resultats\multi\BZ_F_weekly\graphiques\rendements_vol_var.png" docs\img\volatilite_brent.png
+git add -A
+git status
