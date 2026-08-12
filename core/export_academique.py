@@ -2,7 +2,7 @@
 """
 Export academique PDF + Excel dans un dossier persistant (exports/).
 
-Tables produites (ordre TD M1 MBFA / Box-Jenkins) :
+Tables produites (ordre canonique Box-Jenkins) :
   1. Statistiques descriptives — prix log et rendements
   2. Correlogrammes — prix log, rendements (figure + table 30 lags)
   3. Tests de racine unitaire — ADF / PP / KPSS (3 specs + synthese)

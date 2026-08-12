@@ -302,7 +302,7 @@ def mcneil_frey_test(
     n_boot : int
         Nombre de replications bootstrap (defaut 1000).
     seed : int
-        Graine numpy (defaut 42, pour reproductibilite memoire).
+        Graine numpy (defaut 42, pour reproductibilite des resultats).
 
     Returns
     -------

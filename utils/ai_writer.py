@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # ── Prompt système commun à toutes les sections ────────────────────────────
 SYSTEM_PROMPT = """Tu es un analyste quantitatif rédigeant une note technique de risque \
-de marché destinée à un comité des risques (niveau M2 finance / desk front office).
+de marché destinée à un comité des risques (niveau desk front office / fonction risques).
 
 REGISTRE ET STYLE — PROSE ACADÉMIQUE FRANÇAISE :
 - Français académique soigné, fluide et articulé. Non un style télégraphique, \
@@ -346,7 +346,7 @@ def _substituer_variables(texte: str, contexte: dict) -> str:
 
 def rediger_section(section_id: str, contexte: dict, provider,
                     prompts_dir: Path, max_tokens: int = 4000) -> tuple:
-    """Rédige une section du mémoire via un LLMProvider.
+    """Rédige une section du rapport d'analyse via un LLMProvider.
 
     Parameters
     ----------

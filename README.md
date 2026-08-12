@@ -3,7 +3,7 @@
 > Plateforme Python d'économétrie financière : modélisation de la volatilité conditionnelle, mesure du risque de marché et backtesting réglementaire.
 
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Tests](https://img.shields.io/badge/tests-200%2B-brightgreen)
+![Tests](https://img.shields.io/badge/tests-231-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ![Volatilité conditionnelle estimée sur le Brent](docs/img/volatilite_brent.png)
@@ -76,6 +76,8 @@ cp .env.example .env       # Linux / macOS
 copy .env.example .env     # Windows
 ```
 
+La rédaction assistée nécessite un dossier `prompts/` contenant un fichier `.txt` par section. Ces gabarits ne sont pas fournis dans le dépôt public.
+
 ## Utilisation
 
 **En ligne de commande**
@@ -118,7 +120,7 @@ tickerlab/
 pytest
 ```
 
-Plus de 200 tests couvrant l'estimation, les mesures de risque, les backtests et la chaîne de génération de rapport. Intégration continue via GitHub Actions, avec seuils de couverture calibrés par module.
+231 tests couvrant l'estimation, les mesures de risque, les backtests et la chaîne de génération de rapport. Intégration continue via GitHub Actions, avec seuils de couverture calibrés par module.
 
 ## Limites
 

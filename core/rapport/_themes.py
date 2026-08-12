@@ -11,7 +11,7 @@ _log = _logging.getLogger('tickerlab.rapport._themes')
 
 THEMES = {
     'academique': {
-        # Style memoire universitaire — sobre, bleu-gris fonce
+        # Style rapport academique — sobre, bleu-gris fonce
         'titre_fond':       '#2C3E50',
         'titre_texte':      '#FFFFFF',
         'entete_fond':      '#ECF0F1',
