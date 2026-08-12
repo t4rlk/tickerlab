@@ -14,7 +14,7 @@
 
 La mesure du risque de marché se heurte à deux difficultés communes à la plupart des classes d'actifs : une volatilité conditionnelle fortement asymétrique, où les chocs négatifs pèsent davantage que les chocs positifs de même ampleur, et des ruptures structurelles qui invalident l'hypothèse de stabilité des paramètres.
 
-tickerlab industrialise la chaîne complète : estimation, mesure de risque, validation pour tout actif disposant d'un historique de prix : actions, indices, devises, matières premières. L'objectif n'est pas de produire une VaR, mais de produire une VaR dont on sait si elle tient.
+tickerlab industrialise la chaîne complète (estimation, mesure de risque, validation) pour tout actif disposant d'un historique de prix : actions, indices, devises, matières premières.
 
 ## Fonctionnalités
 
