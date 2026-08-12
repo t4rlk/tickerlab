@@ -132,7 +132,7 @@ Bollerslev (1986) · Nelson (1991) · Glosten, Jagannathan & Runkle (1993) · In
 
 ## Auteurs
 
-**Tarik Yazanel** — conception et développement de la plateforme
+**Tarik Yazanel** (conception et développement de la plateforme)
 
 ## Licence
 
