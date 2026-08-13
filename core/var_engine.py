@@ -76,14 +76,16 @@ def var_normale(mu, sigma, alpha):
 
 def var_student(mu, sigma, nu, alpha):
     """
-    VaR sous hypothèse de distribution Student.
+    VaR sous hypothèse de distribution Student STANDARDISÉE (variance unitaire).
 
     Parameters
     ----------
     mu : float
         Moyenne de la distribution.
     sigma : float
-        Écart-type de la distribution.
+        Écart-type de la distribution. À ne pas confondre avec le paramètre
+        d'échelle de la t brute (celui que renvoie scipy.stats.t.fit) :
+        écart-type = échelle × sqrt(nu / (nu - 2)).
     nu : float
         Degrés de liberté.
     alpha : float
@@ -94,7 +96,7 @@ def var_student(mu, sigma, nu, alpha):
     float
         VaR au niveau alpha (négative — convention pertes).
     """
-    z = t_dist.ppf(1 - alpha, df=nu)
+    z = t_dist.ppf(1 - alpha, df=nu) / np.sqrt(nu / (nu - 2.0))
     return mu + z * sigma
 
 
@@ -141,14 +143,15 @@ def tvar_normale(mu, sigma, alpha):
 
 def tvar_student(mu, sigma, nu, alpha):
     """
-    TVaR sous hypothèse de distribution Student.
+    TVaR sous hypothèse de distribution Student STANDARDISÉE (variance unitaire).
 
     Parameters
     ----------
     mu : float
         Moyenne de la distribution.
     sigma : float
-        Écart-type de la distribution.
+        Écart-type de la distribution. Même convention que var_student :
+        écart-type = échelle × sqrt(nu / (nu - 2)).
     nu : float
         Degrés de liberté.
     alpha : float
@@ -160,7 +163,9 @@ def tvar_student(mu, sigma, nu, alpha):
         TVaR au niveau alpha.
     """
     z = t_dist.ppf(1 - alpha, df=nu)
-    return mu - sigma * (t_dist.pdf(z, df=nu) / (1 - alpha)) * (nu + z**2) / (nu - 1)
+    s = np.sqrt(nu / (nu - 2.0))
+    return mu - sigma * (t_dist.pdf(z, df=nu) / (1 - alpha)) \
+                      * (nu + z**2) / (nu - 1) / s
 
 
 def var_cornish_fisher(mu, sigma, S, K, alpha):
@@ -244,9 +249,11 @@ def construire_df_vol(rendements, garch_final, alpha=0.99):
         q_z = var_normale(0.0, 1.0, alpha)
         tvar_z_sc = -norm.pdf(q_z) / (1 - alpha)
     elif dist_name == 't':
+        # Les innovations GARCH sont standardisees (variance unitaire) : le
+        # quantile doit l'etre aussi, d'ou l'appel a var_student/tvar_student
+        # plutot qu'au quantile de la t brute.
         q_z = var_student(0.0, 1.0, nu_garch, alpha)
-        tvar_z_sc = -(t_dist.pdf(q_z, df=nu_garch) / (1 - alpha)) * \
-                    (nu_garch + q_z**2) / (nu_garch - 1)
+        tvar_z_sc = tvar_student(0.0, 1.0, nu_garch, alpha)
     else:
         z_innov = resid_std.values
         q_z = var_historique(z_innov, alpha)
@@ -314,8 +321,13 @@ def calculer_var_tvar(rendements, garch_final, niveaux=None, n_simulations_mc=50
         r_n  = norm.ppf(1 - alpha, loc=mu, scale=sigma)
         rt_n = tvar_normale(mu, sigma, alpha)
 
+        # t ajustee par MLE : t_dist.fit renvoie une ECHELLE, tvar_student attend
+        # un ECART-TYPE (= echelle * sqrt(nu/(nu-2))). Sans cette conversion la
+        # TVaR Student ne correspondrait plus a la VaR Student de la ligne
+        # au-dessus, qui est le quantile de la meme loi ajustee.
         r_t  = t_dist.ppf(1 - alpha, df=nu_fit, loc=mu_fit_t, scale=sigma_fit_t)
-        rt_t = tvar_student(mu_fit_t, sigma_fit_t, nu_fit, alpha)
+        rt_t = tvar_student(mu_fit_t, sigma_fit_t * np.sqrt(nu_fit / (nu_fit - 2.0)),
+                            nu_fit, alpha)
 
         r_cf  = var_cornish_fisher(mu, sigma, S, K, alpha)
         if np.isnan(r_cf):
@@ -329,10 +341,11 @@ def calculer_var_tvar(rendements, garch_final, niveaux=None, n_simulations_mc=50
             r_g = mu + q_g * last_vol
             rt_g = mu - last_vol * norm.pdf(q_g) / (1 - alpha)
         elif dist_name == 't':
-            q_g  = t_dist.ppf(1 - alpha, df=nu_garch)
+            # Innovations GARCH standardisees : quantile et multiplicateur ES
+            # standardises eux aussi (cf. construire_df_vol).
+            q_g  = var_student(0.0, 1.0, nu_garch, alpha)
             r_g  = mu + q_g * last_vol
-            rt_g = mu - last_vol * (t_dist.pdf(q_g, df=nu_garch) / (1 - alpha)) * \
-                   (nu_garch + q_g**2) / (nu_garch - 1)
+            rt_g = mu + tvar_student(0.0, 1.0, nu_garch, alpha) * last_vol
         else:
             r_g    = float(np.quantile(mc_returns, 1 - alpha))
             tail_g = mc_returns[mc_returns <= r_g]

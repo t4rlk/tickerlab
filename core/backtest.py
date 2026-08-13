@@ -153,7 +153,8 @@ def _detail_backtest_oos(serie_oos, mu_bt, nu_bt, dist, vol_oos_vals, garch_bt,
         q99 = norm.ppf(1 - alpha_v)
         esz = tvar_normale(0.0, 1.0, alpha_e)
     elif dist == 't' and not math.isnan(nu_bt):
-        q99 = t_dist.ppf(1 - alpha_v, df=nu_bt)
+        # resid_std est standardise : quantile Student standardise lui aussi.
+        q99 = var_student(0.0, 1.0, nu_bt, alpha_v)
         esz = tvar_student(0.0, 1.0, nu_bt, alpha_e)
     else:                                    # skewt / ged / empirique
         q99 = float(np.quantile(resid_std, 1 - alpha_v))
