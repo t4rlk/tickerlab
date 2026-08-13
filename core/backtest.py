@@ -146,24 +146,30 @@ def _detail_backtest_oos(serie_oos, mu_bt, nu_bt, dist, vol_oos_vals, garch_bt,
     sig = np.asarray(vol_oos_vals, dtype=float)[:T_eff_dyn]
     alpha_v, alpha_e = 0.99, 0.975
 
-    # Quantile standardise VaR 99 % + multiplicateur ES 97.5 % (meme dist que la boucle)
+    # Quantiles standardises VaR 99 % et 97.5 % + multiplicateur ES 97.5 %
+    # (meme dist que la boucle). q99 sert au reporting reglementaire, q975 au
+    # scoring FZ0 qui exige VaR et ES au meme niveau (cf. bloc Fissler-Ziegel).
     resid_std = (garch_bt.resid / garch_bt.conditional_volatility).dropna().values
     resid_std = resid_std[np.isfinite(resid_std)]
     if dist == 'normal':
-        q99 = norm.ppf(1 - alpha_v)
-        esz = tvar_normale(0.0, 1.0, alpha_e)
+        q99  = norm.ppf(1 - alpha_v)
+        q975 = norm.ppf(1 - alpha_e)
+        esz  = tvar_normale(0.0, 1.0, alpha_e)
     elif dist == 't' and not math.isnan(nu_bt):
         # resid_std est standardise : quantile Student standardise lui aussi.
-        q99 = var_student(0.0, 1.0, nu_bt, alpha_v)
-        esz = tvar_student(0.0, 1.0, nu_bt, alpha_e)
+        q99  = var_student(0.0, 1.0, nu_bt, alpha_v)
+        q975 = var_student(0.0, 1.0, nu_bt, alpha_e)
+        esz  = tvar_student(0.0, 1.0, nu_bt, alpha_e)
     else:                                    # skewt / ged / empirique
-        q99 = float(np.quantile(resid_std, 1 - alpha_v))
-        thr = float(np.quantile(resid_std, 1 - alpha_e))
+        q99  = float(np.quantile(resid_std, 1 - alpha_v))
+        thr  = float(np.quantile(resid_std, 1 - alpha_e))
+        q975 = thr                           # quantile empirique a 97.5 %
         tail = resid_std[resid_std <= thr]
-        esz = float(tail.mean()) if len(tail) else thr
+        esz  = float(tail.mean()) if len(tail) else thr
 
-    var99 = mu_bt + q99 * sig                 # negatif (queue de perte)
-    es975 = mu_bt + esz * sig                 # negatif (esz < 0)
+    var99  = mu_bt + q99  * sig               # negatif (queue de perte)
+    var975 = mu_bt + q975 * sig               # negatif — niveau du scoring FZ0
+    es975  = mu_bt + esz  * sig               # negatif (esz < 0)
 
     # Kupiec + Christoffersen sur GARCH dynamique 99 %
     viol = (r < var99).astype(int)
@@ -185,10 +191,16 @@ def _detail_backtest_oos(serie_oos, mu_bt, nu_bt, dist, vol_oos_vals, garch_bt,
     # dynamique contre un benchmark VaR/ES Normal STATIQUE (mu, sigma du train,
     # constants sur l'OOS). H0 : precision predictive egale. Benchmark nomme dans la
     # sortie. `accepte` = GARCH non significativement PIRE que le benchmark.
-    var99_bench = np.full(T_eff_dyn, mu_tr + norm.ppf(1 - alpha_v) * sigma_tr)
-    es975_bench = np.full(T_eff_dyn, mu_tr + tvar_normale(0.0, 1.0, alpha_e) * sigma_tr)
-    fz_g = fissler_ziegel_loss(r, var99,       es975,       alpha=alpha_v)
-    fz_b = fissler_ziegel_loss(r, var99_bench, es975_bench, alpha=alpha_v)
+    # Score evalue a 97.5 % (alpha_e) des DEUX cotes : FZ0 n'est strictement
+    # consistant que pour le couple (VaR_alpha, ES_alpha) AU MEME niveau alpha
+    # (elicitabilite conjointe, Fissler & Ziegel). Le couple 99 % / 97.5 % du
+    # reporting FRTB briserait cette consistance — legitime pour le reporting,
+    # pas pour un scoring conjoint. On aligne donc sur 97.5 %, niveau de
+    # reference de l'ES sous FRTB. Les autres metriques gardent leurs niveaux.
+    var975_bench = np.full(T_eff_dyn, mu_tr + norm.ppf(1 - alpha_e) * sigma_tr)
+    es975_bench  = np.full(T_eff_dyn, mu_tr + tvar_normale(0.0, 1.0, alpha_e) * sigma_tr)
+    fz_g = fissler_ziegel_loss(r, var975,       es975,       alpha=alpha_e)
+    fz_b = fissler_ziegel_loss(r, var975_bench, es975_bench, alpha=alpha_e)
     fz_g_ser = fz_g['score_series'].values
     fz_b_ser = fz_b['score_series'].values
     n_dm = min(len(fz_g_ser), len(fz_b_ser))
@@ -212,6 +224,7 @@ def _detail_backtest_oos(serie_oos, mu_bt, nu_bt, dist, vol_oos_vals, garch_bt,
         'berkowitz': berk,                     # dict {LR_stat, pvalue, ...}
         'fissler_ziegel_dm': {
             'benchmark':       'Normale statique (mu, sigma du train)',
+            'alpha_score':     alpha_e,        # VaR et ES alignes pour FZ0
             'score_garch':     fz_g['score_moyen'],
             'score_benchmark': fz_b['score_moyen'],
             'dm_stat':         _rnd4(dm_stat),
