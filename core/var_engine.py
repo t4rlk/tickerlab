@@ -46,10 +46,25 @@ def tvar_historique(serie, alpha):
     -------
     float
         TVaR au niveau alpha.
+
+    Notes
+    -----
+    Les observations situées exactement SUR le quantile ne sont comptées qu'à
+    hauteur de la masse de probabilité résiduelle, et non en entier. Sans ce
+    traitement, une série comportant des ex æquo au quantile (défauts, rendements
+    nuls) gonfle la queue bien au-delà de la fraction 1 - alpha visée : sur deux
+    obligations à défaut de probabilité 4 %, le quantile à 5 % vaut 0 et la
+    « queue » englobe alors 96 % de l'échantillon.
     """
-    q = np.quantile(serie, 1 - alpha)
-    tail = serie[serie <= q]
-    return float(tail.mean()) if len(tail) > 0 else float(q)
+    x = np.asarray(serie, dtype=float)
+    q = float(np.quantile(x, 1 - alpha))
+    masse = (1 - alpha) * x.size          # nombre d'observations dans la queue
+    if x.size == 0 or masse <= 0:
+        return q
+    sous = x[x < q]                       # strictement sous le quantile
+    if sous.size >= masse:                # pas d'atome à pondérer
+        return float(sous.mean())
+    return float((sous.sum() + (masse - sous.size) * q) / masse)
 
 
 def var_normale(mu, sigma, alpha):
