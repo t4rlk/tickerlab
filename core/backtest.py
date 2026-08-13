@@ -616,7 +616,7 @@ def fissler_ziegel_loss(
     Score FZ0 de Fissler & Ziegel — strictement consistant pour (VaR_α, ES_α).
 
     Formule FZ0 (convention pertes négatives, Nolde & Ziegel 2017 eq. 3.6) :
-        S_t = [(p − I_t)·v_t − I_t·r_t] / e_t + log(−e_t)
+        S_t = [(p − I_t)·v_t + I_t·r_t] / e_t + p·log(−e_t)
     où p = 1−α, I_t = I(r_t < v_t), e_t = ES_t < 0.
 
     Score total plus faible = meilleur modèle (comparaison relative).
@@ -652,7 +652,7 @@ def fissler_ziegel_loss(
 
     hits  = (r < v).astype(float)
     p     = 1.0 - alpha
-    score_t = ((p - hits) * v - hits * r) / e + np.log(-e)
+    score_t = ((p - hits) * v + hits * r) / e + p * np.log(-e)
     total   = float(score_t.sum())
 
     return {
