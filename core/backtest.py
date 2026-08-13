@@ -138,7 +138,7 @@ def _detail_backtest_oos(serie_oos, mu_bt, nu_bt, dist, vol_oos_vals, garch_bt,
 
     Convention pertes : VaR/ES negatifs (queue gauche), identique a backtest_oos.
     """
-    from .var_engine import tvar_normale, tvar_student
+    from .var_engine import tvar_normale, tvar_student, var_student
     from .garch_selector import berkowitz_test
     from .dm_gk import _newey_west_var, _auto_lags
 
@@ -451,11 +451,18 @@ def acerbi_szekely_z_test(
     """
     Test ES d'Acerbi & Székely — statistiques Z1 et Z2.
 
-    Z1 = (1/(T·p·ē)) · Σ_t I_t·r_t + 1   (ES moyen)
-    Z2 = (1/(T·p))   · Σ_t I_t·r_t/e_t + 1  (ES ponctuel)
+    Z1 = (1/(N_T·|ē|)) · Σ_t I_t·r_t + 1     (ES moyen, conditionnel)
+    Z2 = (1/(T·p))     · Σ_t I_t·r_t/|e_t| + 1  (ES ponctuel, inconditionnel)
 
     Sous H₀ (ES correctement spécifié), E[Z1] = E[Z2] = 0.
     Z < 0 indique une sous-estimation de l'ES (risque sous-estimé).
+
+    Les dénominateurs prennent la MAGNITUDE de l'ES : les entrées sont en
+    convention pertes (négatives), et sans valeur absolue le rapport
+    Σ I·r / ES change de signe, plaçant Z autour de +2 sous H₀ au lieu de 0.
+    Z1 étant conditionnel aux violations, il est normalisé par leur nombre
+    observé N_T et vaut nan en leur absence ; Z2, inconditionnel, vaut alors
+    exactement 1.0, qui est sa valeur maximale.
     p-valeurs par bootstrap paramétrique sous H₀.
 
     Parameters
@@ -489,13 +496,22 @@ def acerbi_szekely_z_test(
     p = 1.0 - alpha
     hits = (r < v).astype(float)
 
-    e_bar = float(np.mean(e))
-    Z1 = (float(np.dot(hits, r)) / (T * p * e_bar) + 1.0
-          if abs(e_bar) > 1e-12 else float('nan'))
+    n_viol = float(hits.sum())
+    e_bar  = float(np.mean(e))
+
+    # L'ES entre en convention pertes (negatif) mais la statistique compare une
+    # perte a une MAGNITUDE d'ES : sans la valeur absolue le rapport change de
+    # signe et Z vaut ~ +2 sous H0 au lieu de ~ 0, ce qui inverse la lecture
+    # « Z negatif = risque sous-estime ».
+    # Z1 est conditionnel aux violations : normalise par leur nombre OBSERVE, et
+    # indefini (nan) en leur absence — a ne pas confondre avec 0, qui signifierait
+    # « ES correctement specifie ».
+    Z1 = (float(np.dot(hits, r)) / (n_viol * abs(e_bar)) + 1.0
+          if n_viol > 0 and abs(e_bar) > 1e-12 else float('nan'))
 
     abs_e = np.abs(e)
     with np.errstate(divide='ignore', invalid='ignore'):
-        z2_terms = np.where(abs_e > 1e-12, hits * r / e, 0.0)
+        z2_terms = np.where(abs_e > 1e-12, hits * r / abs_e, 0.0)
     Z2 = float(z2_terms.sum()) / (T * p) + 1.0
 
     # Violations empiriques (r_t, e_t) pour bootstrap sous H₀
@@ -520,20 +536,24 @@ def acerbi_szekely_z_test(
     for s in range(n_sim):
         n_v = int(N_s[s])
         if n_v == 0:
-            Z1_null[s] = 1.0
+            Z1_null[s] = float('nan')     # indefini, comme la statistique observee
             Z2_null[s] = 1.0
             continue
         idx   = rng.choice(n_viol_obs, size=n_v, replace=True)
         r_s   = viol_r[idx]
         e_s   = viol_e[idx]
-        Z1_null[s] = (r_s.sum() / (T * p * e_bar) + 1.0
-                      if abs(e_bar) > 1e-12 else 0.0)
+        Z1_null[s] = (r_s.sum() / (n_v * abs(e_bar)) + 1.0
+                      if abs(e_bar) > 1e-12 else float('nan'))
         ae_s = np.abs(e_s)
         with np.errstate(divide='ignore', invalid='ignore'):
-            Z2_null[s] = (np.where(ae_s > 1e-12, r_s / e_s, 0.0).sum()
+            Z2_null[s] = (np.where(ae_s > 1e-12, r_s / ae_s, 0.0).sum()
                           / (T * p) + 1.0)
 
-    p_Z1 = float(np.mean(Z1_null <= Z1)) if math.isfinite(Z1) else float('nan')
+    # Z1_null peut contenir des nan (tirages sans violation) : les exclure plutot
+    # que de les laisser compter comme des non-depassements.
+    fini1 = np.isfinite(Z1_null)
+    p_Z1 = (float(np.mean(Z1_null[fini1] <= Z1))
+            if math.isfinite(Z1) and fini1.any() else float('nan'))
     p_Z2 = float(np.mean(Z2_null <= Z2)) if math.isfinite(Z2) else float('nan')
 
     return {
