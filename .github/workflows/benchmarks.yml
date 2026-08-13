@@ -1,0 +1,57 @@
+name: benchmarks
+
+# Validation externe : reproduction du benchmark FCP, invariants analytiques,
+# taille et puissance des backtests. Voir tests/benchmarks/README.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 4 * * 1"   # lundi 04:00 UTC : version longue
+
+jobs:
+  fast:
+    name: benchmarks (rapide)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # Le jeu DEM/GBP est telecharge une fois puis mis en cache (SHA-256
+      # verifie a chaque execution par la fixture).
+      - uses: actions/cache@v4
+        with:
+          path: tests/benchmarks/data
+          key: bench-data-dem2gbp-v1
+
+      - run: pip install -e ".[dev]" pytest
+
+      - name: Suite rapide
+        env:
+          BENCH_REPS: "400"
+        run: pytest tests/benchmarks -v -m "not slow" --durations=10
+
+  full:
+    name: benchmarks (complet)
+    if: github.event_name == 'schedule' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/cache@v4
+        with:
+          path: tests/benchmarks/data
+          key: bench-data-dem2gbp-v1
+      - run: pip install -e ".[dev]" pytest
+
+      - name: Suite complete (Monte-Carlo lourd)
+        env:
+          BENCH_REPS: "5000"
+        run: pytest tests/benchmarks -v --durations=15
