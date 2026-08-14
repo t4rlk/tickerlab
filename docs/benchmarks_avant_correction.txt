@@ -1,0 +1,34 @@
+Suite de benchmarks - etat AVANT corrections
+=============================================
+
+Commit      : 0124f91 (refactor: extract atomic VaR functions and expose fit controls)
+Parametres  : BENCH_REPS=400
+Resultat    : 45 passed, 21 failed
+
+Quatre causes racines
+---------------------
+Student non standardisee                       13 tests
+  VaR 2.1318 au lieu de 1.5074 a nu=4, soit +41.4 %
+  Le quantile utilise etait celui de la Student brute alors que les
+  innovations GARCH sont standardisees a variance unitaire.
+
+Acerbi-Szekely : signe et conditionnement        5 tests
+  Z1 et Z2 a +1.97 sous H0 au lieu de 0, et +2.43 en cas de sous-estimation
+  du risque au lieu d'une valeur negative. Quantile a 5 % de Z2 a +1.357
+  contre -0.70 publie.
+
+FZ0 non strictement consistant                   2 tests
+  argmin a 1.3449 contre 1.6449 attendu, meme ecart de 0.30 aux deux niveaux.
+  Le score recompensait la sous-estimation du risque.
+
+ES historique en presence d'ex aequo             1 test
+  3.95 au lieu de 80 sur le contre-exemple des deux obligations a defaut.
+
+Etat apres corrections : 66 passed
+(voir benchmarks_apres_correction.txt)
+
+Note
+----
+Sortie pytest integrale non archivee : l'etat fautif n'est plus reproductible
+sur cette branche. Les valeurs ci-dessus proviennent du run du 14/08/2026 et
+sont reprises dans les messages des commits de correction.

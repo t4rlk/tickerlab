@@ -1,0 +1,15 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.0.3, pluggy-1.6.0
+rootdir: C:\Users\yazan\Desktop\tickerlab
+configfile: pyproject.toml
+plugins: anyio-4.7.0, cov-7.1.0
+collected 66 items
+
+tests\benchmarks\test_analytical.py .................................... [ 54%]
+.....                                                                    [ 62%]
+tests\benchmarks\test_backtest_size_power.py .................           [ 87%]
+tests\benchmarks\test_fcp_garch.py ........                              [100%]
+
+======================= 66 passed in 482.54s (0:08:02) ========================
+
+
