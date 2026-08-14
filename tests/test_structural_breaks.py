@@ -20,15 +20,33 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from tickerlab.core.structural_breaks import analyser_icss_pipeline, inclan_tiao_icss
+from tickerlab.core.structural_breaks import (
+    analyser_icss_pipeline,
+    estimer_garch_omega_par_regime,
+    inclan_tiao_icss,
+    selectionner_ruptures_espacees,
+)
+
+# Persistance réellement simulée par la fixture, des DEUX côtés de la rupture.
+PERSISTANCE_SIMULEE = 0.08 + 0.88   # alpha + beta
+RUPTURE_SIMULEE     = 300           # indice de la rupture dans la fixture
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 def _make_garch_with_breaks(n: int = 600, seed: int = 0):
     """
-    Série GARCH(1,1)-t avec rupture de variance forte à t=300 (variance x9).
+    Série GARCH(1,1) avec rupture de variance forte à t=300 (variance x9).
     La rupture est suffisamment large pour que l'ICSS la détecte avec certitude.
+
+    Le multiplicateur porte sur omega — saut de niveau de la variance
+    inconditionnelle omega/(1-alpha-beta) — et NON sur eps. Appliqué à eps, il
+    serait réinjecté au carré dans la récurrence de h et porterait la
+    persistance effective à 9*alpha+beta = 1.60 > 1 : la variance exploserait
+    géométriquement au lieu de sauter d'un palier.
+
+    Échelle : rendements quotidiens en pourcentage, ecart-type ~1.1 % avant la
+    rupture et ~3.4 % apres. Persistance alpha+beta = 0.96 < 1 des deux cotes.
     """
     from arch import arch_model
     rng = np.random.default_rng(seed)
@@ -40,10 +58,10 @@ def _make_garch_with_breaks(n: int = 600, seed: int = 0):
     var_mult[300:] = 9.0  # x9 variance → x3 volatility, rupture nette
 
     for i in range(1, n):
-        h[i]   = omega + alpha * eps[i - 1] ** 2 + beta * h[i - 1]
-        eps[i] = rng.standard_normal() * np.sqrt(h[i] * var_mult[i])
+        h[i]   = omega * var_mult[i] + alpha * eps[i - 1] ** 2 + beta * h[i - 1]
+        eps[i] = rng.standard_normal() * np.sqrt(h[i])
 
-    series   = pd.Series(eps * 100)
+    series   = pd.Series(eps)
     fit      = arch_model(series, vol='Garch', p=1, o=0, q=1, dist='t').fit(disp='off')
     best_row = pd.Series({
         'modele': 'GARCH', 'vol': 'Garch',
