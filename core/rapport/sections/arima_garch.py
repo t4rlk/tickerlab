@@ -733,22 +733,30 @@ def _tab_component_garch(cg: dict) -> list:
     ok   = '✓'
     nok  = '✗'
 
+    # Dégénérescences : parametre ecrase contre une borne du domaine. Le libelle
+    # affiche alors la DEGENERESCENCE et non la contrainte formelle, qui reste
+    # satisfaite — sans quoi un ✗ ferait croire a une violation de C1/C2.
+    beta_deg = bool(cg.get('beta_degenerate', False))
+    rho_deg  = bool(cg.get('rho_at_bound',    False))
+    nu_deg   = bool(cg.get('nu_at_bound',     False))
+
     # Contrainte associée à chaque paramètre
     _constraint_label = {
         'omega': 'omega > 0',
-        'rho':   '0 < rho < 1 (C2)',
+        'rho':   'DEGENERE : rho sur la borne haute' if rho_deg else '0 < rho < 1 (C2)',
         'phi':   '',
         'alpha': 'alpha >= 0',
-        'beta':  'alpha+beta < 1 (C1)',
-        'nu':    'nu > 2',
+        'beta':  ('DEGENERE : beta ~ 0, composante transitoire absente'
+                  if beta_deg else 'alpha+beta < 1 (C1)'),
+        'nu':    'DEGENERE : nu sur la borne basse' if nu_deg else 'nu > 2',
     }
     _constraint_check = {
         'omega': True,
-        'rho':   ck.get('rho_in_01', True),
+        'rho':   ck.get('rho_in_01', True) and not rho_deg,
         'phi':   True,
         'alpha': True,
-        'beta':  ck.get('alpha_plus_beta_lt_1', True),
-        'nu':    True,
+        'beta':  ck.get('alpha_plus_beta_lt_1', True) and not beta_deg,
+        'nu':    not nu_deg,
     }
 
     lignes = []
@@ -800,14 +808,28 @@ def _tab_component_garch(cg: dict) -> list:
     ab  = cg.get('alpha', 0.0) + cg.get('beta', 0.0)
     rho = cg.get('rho', 1.0)
     c3_ok  = ck.get('separation', True)
-    c3_str = (f'{ok} alpha+beta ({ab:.4f}) < rho ({rho:.4f}) — separation OK'
-              if c3_ok
-              else f'{nok} VIOLATION : alpha+beta ({ab:.4f}) >= rho ({rho:.4f})')
+    if c3_ok:
+        c3_str = f'{ok} alpha+beta ({ab:.4f}) < rho ({rho:.4f}) — separation OK'
+    elif ab >= rho:
+        c3_str = f'{nok} VIOLATION : alpha+beta ({ab:.4f}) >= rho ({rho:.4f})'
+    else:
+        # L'inegalite est numeriquement vraie mais vide de sens : beta ~ 0.
+        c3_str = (f'{nok} NON VALIDE : alpha+beta ({ab:.4f}) < rho ({rho:.4f}) '
+                  f'obtenu par effondrement de la composante transitoire '
+                  f'(beta ~ 0), non par separation reelle')
 
     notes = [
         'Engle & Lee (1999, eq.7, p.482). Opt. SLSQP. Student-t innovations.',
         f'Contrainte C3 (separation) : {c3_str}.',
     ]
+    if cg.get('degenerate'):
+        notes.append(
+            'ALERTE : SOLUTION DEGENEREE — ce resultat ne constitue PAS une '
+            'decomposition permanente/transitoire valide et ne doit pas etre '
+            'interprete comme telle.'
+        )
+        for _lib in cg.get('degeneracies', []):
+            notes.append(f'Degenerescence : {_lib}.')
     if cg.get('phi_warning'):
         notes.append('ALERTE : |phi| > 0.5 — verifier la stationnarite (Engle & Lee 1999).')
     if cg.get('saturation_warning'):
@@ -912,6 +934,15 @@ def _encadre_component_garch(cg: dict, config: dict) -> list:
         'Contrainte de separation (C3) : alpha+beta < rho — non-negociable pour '
         'l\'interpretabilite economique (Engle & Lee 1999, eq. 7, p. 482).'
     ))
+    if cg.get('degenerate'):
+        story.append(_p(
+            '<b>AVERTISSEMENT — solution degeneree.</b> L\'estimation a converge '
+            'vers une solution ecrasee contre une borne du domaine : '
+            + ' ; '.join(cg.get('degeneracies', []))
+            + '. Les contraintes (C1)-(C3) sont formellement satisfaites, mais la '
+            'decomposition permanente/transitoire qui en resulte n\'est PAS '
+            'interpretable et ne doit pas etre lue comme une decomposition valide.'
+        ))
     try:
         story.extend(_tab_component_garch(cg))
     except Exception as e:

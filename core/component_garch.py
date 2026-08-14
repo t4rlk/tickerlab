@@ -42,10 +42,22 @@ from scipy.optimize import minimize
 from scipy.special import gammaln
 from scipy.stats import t as _t_dist
 
-__etape_version__ = '1'
+# '2' : ajout de la detection de degenerescence (cles degenerate/degeneracies).
+# Les entrees ecrites en version '1' ne portent pas ces cles et produiraient un
+# rapport sans alerte : le bump de version les rend inatteignables.
+__etape_version__ = '2'
 logger = logging.getLogger(__name__)
 
 _PARAM_NAMES = ('omega', 'rho', 'phi', 'alpha', 'beta', 'nu')
+
+# ── Seuils de dégénérescence ──────────────────────────────────────────────────
+# Une solution collée à une borne du domaine satisfait formellement (C1)-(C3)
+# sans constituer une décomposition permanente/transitoire interprétable.
+# Ces seuils sont DISTINCTS de saturation_warning, qui ne surveille que la
+# proximité de la frontière C3 (|α+β − ρ| < 1e-3).
+_BORNE_BETA_BASSE = 1e-6     # β sur sa borne basse (bounds : 1e-8)
+_BORNE_RHO_HAUTE  = 0.9995   # ρ sur sa borne haute (bounds : 0.9999)
+_BORNE_NU_BASSE   = 2.5      # ν sur sa borne basse (bounds : 2.01)
 
 
 # ── Recursion ──────────────────────────────────────────────────────────────────
@@ -221,13 +233,25 @@ def estimer_component_garch(
             dict — two-sided t-test p-values (NaN if std_err unavailable).
         ``constraints_ok``
             dict with booleans : ``alpha_plus_beta_lt_1``, ``rho_in_01``,
-            ``separation`` (C3).
+            ``separation`` (C3). ``separation`` exige en outre une composante
+            transitoire non dégénérée : avec β ≈ 0 l'inégalité α+β < ρ est
+            obtenue par effondrement, et ``separation`` vaut False.
         ``aic``, ``bic``, ``loglik``
             Information criteria and log-likelihood.
         ``phi_warning``
             bool — True if |φ̂| > 0.5 (Engle & Lee 1999 warn of instability).
         ``saturation_warning``
             bool — True if |α̂+β̂ − ρ̂| < 1e-3 (constraint C3 nearly active).
+        ``degenerate``
+            bool — True si au moins un paramètre est écrasé contre une borne
+            du domaine. Un modèle dégénéré ne doit PAS être présenté comme une
+            décomposition permanente/transitoire valide.
+        ``degeneracies``
+            list of str — libellés explicites des dégénérescences détectées
+            (vide si aucune).
+        ``beta_degenerate``, ``rho_at_bound``, ``nu_at_bound``
+            bool — critères individuels : β < 1e-6 (composante transitoire
+            disparue), ρ > 0.9995, ν < 2.5.
         ``q_t``
             pd.Series — estimated permanent component (same index as garch_final).
         ``sigma2_t``
@@ -385,17 +409,57 @@ def estimer_component_garch(
     except Exception as exc:
         logger.debug("Component GARCH: Hessien non inversible : %s", exc)
 
-    # ── Vérification des contraintes ─────────────────────────────────────────
+    # ── Détection des solutions dégénérées ───────────────────────────────────
+    # Distincte de saturation_warning : on ne teste pas la proximité de C3 mais
+    # l'écrasement de la solution contre une borne du domaine. Une telle
+    # solution n'est PAS une décomposition permanente/transitoire valide, même
+    # lorsque (C1)-(C3) sont formellement satisfaites.
     ab = alpha_h + beta_h
+
+    beta_degenerate = bool(beta_h < _BORNE_BETA_BASSE)
+    rho_at_bound    = bool(rho_h  > _BORNE_RHO_HAUTE)
+    nu_at_bound     = bool(nu_h   < _BORNE_NU_BASSE)
+
+    degeneracies = []
+    if beta_degenerate:
+        degeneracies.append(
+            f"beta = {beta_h:.3e} sur sa borne basse (< {_BORNE_BETA_BASSE:g}) : "
+            f"composante transitoire disparue, le modele degenere en GARCH simple"
+        )
+    if rho_at_bound:
+        degeneracies.append(
+            f"rho = {rho_h:.6f} sur sa borne haute (> {_BORNE_RHO_HAUTE:g}) : "
+            f"composante permanente contre le bord du domaine"
+        )
+    if nu_at_bound:
+        degeneracies.append(
+            f"nu = {nu_h:.4f} proche de sa borne basse (< {_BORNE_NU_BASSE:g}) : "
+            f"degres de liberte a la limite"
+        )
+    degenerate = bool(degeneracies)
+
+    # ── Vérification des contraintes ─────────────────────────────────────────
+    # C3 : la séparation suppose une composante transitoire NON dégénérée.
+    # Avec β ≈ 0, l'inégalité α+β < ρ est obtenue par effondrement de la
+    # composante transitoire, pas par une séparation réelle : on ne valide pas.
     constraints_ok = {
         'alpha_plus_beta_lt_1': bool(ab < 1.0),
         'rho_in_01':            bool(0.0 < rho_h < 1.0),
-        'separation':           bool(ab < rho_h),         # C3 — non-négociable
+        'separation':           bool(ab < rho_h and not beta_degenerate),
     }
 
     # ── Avertissements ───────────────────────────────────────────────────────
     phi_warning        = bool(abs(phi_h) > 0.5)
     saturation_warning = bool(abs(ab - rho_h) < 1e-3)
+
+    for _lib in degeneracies:
+        logger.warning("Component GARCH: solution degeneree — %s", _lib)
+    if degenerate:
+        logger.warning(
+            "Component GARCH: la decomposition permanente/transitoire n'est PAS "
+            "interpretable pour cette serie (%d critere(s) de degenerescence).",
+            len(degeneracies),
+        )
 
     if phi_warning:
         logger.warning(
@@ -434,6 +498,11 @@ def estimer_component_garch(
         'loglik':             float(loglik),
         'phi_warning':        phi_warning,
         'saturation_warning': saturation_warning,
+        'degenerate':         degenerate,
+        'degeneracies':       degeneracies,
+        'beta_degenerate':    beta_degenerate,
+        'rho_at_bound':       rho_at_bound,
+        'nu_at_bound':        nu_at_bound,
         'q_t':                q_t,
         'sigma2_t':           sigma2_t,
         'n_obs':              n_obs,
