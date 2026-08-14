@@ -29,6 +29,8 @@ import math
 import warnings
 import numpy as np
 import pandas as pd
+from scipy.optimize import minimize
+from scipy.special import gammaln
 from scipy.stats import f as f_dist, norm
 
 _log = logging.getLogger(__name__)
@@ -358,6 +360,354 @@ def _build_break_dummies(
     return df
 
 
+# ── GARCH à omega par régime (Hillebrand 2005) ───────────────────────────────
+
+_PENALITE_NLL   = 1e10   # valeur retournée par la log-vraisemblance en échec
+_BORNE_BASSE_AB = 1e-6   # alpha/beta jugés écrasés sur leur borne en deçà
+_MIN_OBS_REGIME = 50     # taille minimale d'un régime exploitable
+_MAX_REGIMES_DEFAUT = 6  # plafond d'identifiabilité (1 paramètre omega/régime)
+
+
+def selectionner_ruptures_espacees(
+    breakpoints,
+    n: int,
+    min_obs_regime: int = _MIN_OBS_REGIME,
+    max_regimes: int = _MAX_REGIMES_DEFAUT,
+) -> list:
+    """
+    Sélectionne les ruptures exploitables pour une estimation à omega par régime.
+
+    Critère d'ESPACEMENT, non de rang chronologique. Les ruptures sont
+    parcourues dans l'ordre et retenues seulement si elles laissent au moins
+    ``min_obs_regime`` observations depuis la rupture précédemment retenue —
+    le début de série jouant ce rôle pour la première — ET jusqu'à la fin de
+    la série.
+
+    Motivation : une troncature par rang (``breakpoints[:k]``) retient les
+    ruptures les plus PRÉCOCES. Sur des séries réelles où l'ICSS en détecte
+    plusieurs dizaines, souvent agglutinées en début d'échantillon, elle
+    produit des régimes de quelques dizaines d'observations et rend
+    l'estimation systématiquement dégénérée.
+
+    Cohérence des seuils : le défaut est ``_MIN_OBS_REGIME``, celui-là même en
+    deçà duquel ``estimer_garch_omega_par_regime`` déclare un régime dégénéré.
+    Les deux doivent rester alignés — retenir une rupture qui produirait un
+    régime aussitôt jugé dégénéré n'aurait aucun sens. Le test de sélection est
+    ``>= min_obs_regime`` et celui de dégénérescence ``< min_obs_regime`` : un
+    régime d'exactement ``min_obs_regime`` observations est donc accepté par
+    les deux.
+
+    Plafond ``max_regimes`` : chaque régime consomme un paramètre omega libre.
+    Le plafond borne la dimension du problème d'estimation et protège
+    l'identifiabilité des omega ; il ne dérive PAS de l'ancien mécanisme
+    d'injection de dummies, qui n'existe plus.
+
+    Parameters
+    ----------
+    breakpoints : list of int
+        Indices candidats (base 0), dans un ordre quelconque.
+    n : int
+        Longueur de la série.
+    min_obs_regime : int
+        Taille minimale d'un régime, en observations (défaut 50).
+    max_regimes : int
+        Nombre maximal de régimes (défaut 6), soit au plus
+        ``max_regimes - 1`` ruptures retenues.
+
+    Returns
+    -------
+    list of int
+        Ruptures retenues, triées, espacées d'au moins ``min_obs_regime``.
+    """
+    if n <= 0 or int(max_regimes) < 2:
+        return []
+
+    min_obs      = max(int(min_obs_regime), 1)
+    max_ruptures = int(max_regimes) - 1
+
+    retenues: list = []
+    precedent = 0                       # borne gauche du régime courant
+    for b in sorted({int(x) for x in breakpoints}):
+        if len(retenues) >= max_ruptures:
+            break
+        if b <= 0 or b >= n:
+            continue
+        if b - precedent < min_obs:     # régime courant trop court
+            continue
+        if n - b < min_obs:             # dernier régime trop court
+            continue
+        retenues.append(b)
+        precedent = b
+
+    return retenues
+
+
+def _indices_regimes(n: int, breakpoints) -> tuple:
+    """Indice de régime k(t) pour chaque t, et liste des ruptures retenues.
+
+    Les ruptures hors de ]0, n[ et les doublons sont écartés : une rupture en 0
+    ou en n ne sépare aucun régime.
+    """
+    bps = sorted({int(b) for b in breakpoints if 0 < int(b) < n})
+    k = np.zeros(n, dtype=np.int64)
+    for j, b in enumerate(bps, start=1):
+        k[b:] = j
+    return k, bps
+
+
+def _recursion_omega_regime(omegas, alpha, beta, eps2, regime, sigma2_0):
+    """Récursion sigma2[t] = omega[k(t)] + alpha·eps2[t-1] + beta·sigma2[t-1].
+
+    Renvoie None dès qu'une valeur non finie ou non strictement positive
+    apparaît, plutôt que de propager.
+
+    Le contrôle de finitude est EXPLICITE et non un plancher `max(x, 1e-8)` :
+    `max` ne protège pas contre un nan, toute comparaison avec nan étant
+    fausse, et le nan traverserait alors silencieusement toute la récursion
+    (leçon de core/component_garch.py).
+    """
+    if not (math.isfinite(sigma2_0) and sigma2_0 > 0.0):
+        return None
+    T = len(eps2)
+    sigma2 = np.empty(T, dtype=float)
+    sigma2[0] = sigma2_0
+    for t in range(1, T):
+        s2 = omegas[regime[t]] + alpha * eps2[t - 1] + beta * sigma2[t - 1]
+        if not math.isfinite(s2) or s2 <= 0.0:
+            return None
+        sigma2[t] = s2
+    return sigma2
+
+
+def _nll_omega_regime(params, eps2, regime, n_regimes, sigma2_0, dist) -> float:
+    """Log-vraisemblance négative du GARCH à omega par régime.
+
+    Renvoie ``_PENALITE_NLL`` sur tout échec numérique — jamais un nan, que
+    l'optimiseur ne saurait pas exploiter.
+    """
+    if not np.all(np.isfinite(params)):
+        return _PENALITE_NLL
+
+    omegas = params[:n_regimes]
+    alpha  = float(params[n_regimes])
+    beta   = float(params[n_regimes + 1])
+    nu     = float(params[n_regimes + 2]) if dist == 't' else None
+
+    if dist == 't' and nu <= 2.0:
+        return _PENALITE_NLL
+
+    sigma2 = _recursion_omega_regime(omegas, alpha, beta, eps2, regime, sigma2_0)
+    if sigma2 is None:
+        return _PENALITE_NLL
+
+    if dist == 't':
+        # Student STANDARDISÉE (variance unitaire) — même convention que
+        # core.var_engine.var_student : ecart-type = echelle × sqrt(nu/(nu-2)).
+        log_c = (gammaln((nu + 1.0) / 2.0) - gammaln(nu / 2.0)
+                 - 0.5 * math.log(math.pi * (nu - 2.0)))
+        ll = float(np.sum(log_c - 0.5 * np.log(sigma2)
+                          - (nu + 1.0) / 2.0
+                          * np.log1p(eps2 / (sigma2 * (nu - 2.0)))))
+    else:
+        ll = float(np.sum(-0.5 * math.log(2.0 * math.pi)
+                          - 0.5 * np.log(sigma2)
+                          - 0.5 * eps2 / sigma2))
+
+    return -ll if math.isfinite(ll) else _PENALITE_NLL
+
+
+def estimer_garch_omega_par_regime(
+    rendements,
+    breakpoints,
+    dist: str = 'normal',
+    nu=None,
+    alpha0=None,
+    beta0=None,
+) -> dict:
+    """
+    GARCH(1,1) à omega propre à chaque régime (spécification de Hillebrand 2005).
+
+        sigma2[t] = omega[k(t)] + alpha · eps2[t-1] + beta · sigma2[t-1]
+
+    où k(t) est l'indice du régime auquel appartient t. ``alpha`` et ``beta``
+    sont COMMUNS à tous les régimes ; il y a ``len(breakpoints) + 1``
+    paramètres omega.
+
+    Motivation : la persistance alpha+beta mesurée par un GARCH global est
+    gonflée lorsqu'un omega unique est imposé à des régimes de niveaux de
+    variance différents (Lamoureux & Lastrapes 1990 ; Hillebrand 2005). En
+    libérant omega par régime, alpha+beta retombe vers sa valeur réelle.
+
+    Conventions
+    -----------
+    - Moyenne : les rendements sont centrés sur leur moyenne empirique, qui
+      n'est pas ré-estimée et n'est pas comptée dans les paramètres libres.
+    - **Initialisation de la récursion** : ``sigma2[0]`` est fixé à la variance
+      empirique du PREMIER régime (et non à la variance de toute la série, qui
+      mélangerait les régimes, ni à la variance inconditionnelle implicite, qui
+      dépendrait des paramètres estimés).
+    - Loi de Student STANDARDISÉE à variance unitaire, même convention que
+      ``core.var_engine`` — l'écart-type vaut échelle × sqrt(nu/(nu-2)).
+
+    Parameters
+    ----------
+    rendements : pd.Series or np.ndarray
+        Log-rendements (en pourcentage, comme le reste du pipeline).
+    breakpoints : list of int
+        Indices de rupture (base 0). Les valeurs hors ]0, n[ sont ignorées.
+        Une liste vide donne un GARCH ordinaire à un seul régime.
+    dist : {'normal', 't'}
+        Loi des innovations.
+    nu : float, optional
+        Valeur initiale des degrés de liberté (``dist='t'``). Défaut 8.
+    alpha0, beta0 : float, optional
+        Valeurs initiales issues d'une estimation globale. À défaut, 0.08/0.88.
+
+    Returns
+    -------
+    dict
+        ``omega`` (list, un par régime), ``alpha``, ``beta``, ``nu``,
+        ``persistance`` (alpha+beta), ``n_regimes``, ``loglik``, ``aic``,
+        ``bic``, ``converged``, ``degenerate``, ``degeneracies``.
+
+        En cas de terminaison sur la pénalité, ``loglik``/``aic``/``bic`` valent
+        nan — jamais une valeur finie dénuée de sens — et ``degeneracies`` le
+        dit explicitement.
+
+    References
+    ----------
+    Hillebrand, E. (2005). Neglecting parameter changes in GARCH models.
+        Journal of Econometrics 129(1-2), 121-138.
+    Lamoureux, C.G. & Lastrapes, W.D. (1990). Persistence in variance,
+        structural change, and the GARCH model. JBES 8(2), 225-234.
+    """
+    serie = (rendements.dropna() if hasattr(rendements, 'dropna')
+             else pd.Series(np.asarray(rendements, dtype=float)).dropna())
+    r = np.asarray(serie, dtype=float)
+    r = r[np.isfinite(r)]
+    T = len(r)
+
+    dist = 't' if str(dist).lower().startswith('t') else 'normal'
+
+    if T < 2 * _MIN_OBS_REGIME:
+        return {
+            'omega': [], 'alpha': float('nan'), 'beta': float('nan'), 'nu': None,
+            'persistance': float('nan'), 'n_regimes': 0,
+            'loglik': float('nan'), 'aic': float('nan'), 'bic': float('nan'),
+            'converged': False, 'degenerate': True,
+            'degeneracies': [f'serie trop courte (n={T} < {2 * _MIN_OBS_REGIME})'],
+        }
+
+    eps  = r - float(np.mean(r))
+    eps2 = eps ** 2
+    regime, bps = _indices_regimes(T, breakpoints)
+    n_regimes   = len(bps) + 1
+
+    tailles = [int(np.sum(regime == k)) for k in range(n_regimes)]
+    var_k   = [float(np.mean(eps2[regime == k])) if tailles[k] > 0 else float(np.mean(eps2))
+               for k in range(n_regimes)]
+    sigma2_0 = var_k[0] if var_k[0] > 0 else float(np.mean(eps2))
+
+    # ── Point de départ ──────────────────────────────────────────────────────
+    a0 = 0.08 if alpha0 is None or not math.isfinite(float(alpha0)) else float(alpha0)
+    b0 = 0.88 if beta0 is None or not math.isfinite(float(beta0)) else float(beta0)
+    a0 = float(np.clip(a0, 0.01, 0.30))
+    b0 = float(np.clip(b0, 0.10, 0.95))
+    if a0 + b0 >= 0.99:                       # faisabilité de la contrainte
+        a0, b0 = 0.08, 0.88
+    nu0 = 8.0 if nu is None or not math.isfinite(float(nu)) else float(nu)
+    nu0 = float(np.clip(nu0, 4.0, 200.0))
+
+    omega0 = [max(v * (1.0 - a0 - b0), 1e-8) for v in var_k]
+    theta0 = np.array(omega0 + [a0, b0] + ([nu0] if dist == 't' else []), dtype=float)
+
+    # ── Bornes de boîte + contrainte d'inégalité (schéma component_garch) ────
+    bounds = ([(1e-8, None)] * n_regimes
+              + [(1e-8, 1.0), (1e-8, 1.0)]
+              + ([(2.01, 200.0)] if dist == 't' else []))
+    constraints = [
+        # Stationnarité en covariance : alpha + beta < 1
+        {'type': 'ineq',
+         'fun': lambda x, m=n_regimes: 1.0 - x[m] - x[m + 1] - 1e-6},
+    ]
+
+    args = (eps2, regime, n_regimes, sigma2_0, dist)
+    try:
+        res = minimize(_nll_omega_regime, theta0, args=args, method='SLSQP',
+                       bounds=bounds, constraints=constraints,
+                       options={'maxiter': 300, 'ftol': 1e-9, 'disp': False})
+    except Exception as exc:
+        _log.warning('[omega/regime] echec SLSQP : %s', exc)
+        return {
+            'omega': [], 'alpha': float('nan'), 'beta': float('nan'), 'nu': None,
+            'persistance': float('nan'), 'n_regimes': n_regimes,
+            'loglik': float('nan'), 'aic': float('nan'), 'bic': float('nan'),
+            'converged': False, 'degenerate': True,
+            'degeneracies': [f'exception SLSQP : {exc}'],
+        }
+
+    omega_h = [float(v) for v in res.x[:n_regimes]]
+    alpha_h = float(res.x[n_regimes])
+    beta_h  = float(res.x[n_regimes + 1])
+    nu_h    = float(res.x[n_regimes + 2]) if dist == 't' else None
+
+    # ── Dégénérescences ──────────────────────────────────────────────────────
+    sur_penalite = bool(res.fun >= _PENALITE_NLL * (1.0 - 1e-9))
+    degeneracies = []
+
+    if sur_penalite:
+        degeneracies.append(
+            "terminaison sur la penalite de vraisemblance : aucune solution "
+            "exploitable, loglik/aic/bic non definis"
+        )
+    if not res.success:
+        degeneracies.append(f"SLSQP non converge : {res.message}")
+    if alpha_h < _BORNE_BASSE_AB:
+        degeneracies.append(
+            f"alpha = {alpha_h:.3e} sur sa borne basse (< {_BORNE_BASSE_AB:g}) : "
+            f"pas d'effet ARCH identifie"
+        )
+    if beta_h < _BORNE_BASSE_AB:
+        degeneracies.append(
+            f"beta = {beta_h:.3e} sur sa borne basse (< {_BORNE_BASSE_AB:g}) : "
+            f"pas de persistance identifiee"
+        )
+    for k, taille in enumerate(tailles):
+        if taille < _MIN_OBS_REGIME:
+            degeneracies.append(
+                f"regime {k} de taille {taille} < {_MIN_OBS_REGIME} observations : "
+                f"omega_{k} non identifiable de facon fiable"
+            )
+
+    degenerate = bool(degeneracies)
+
+    if sur_penalite:
+        loglik = aic = bic = float('nan')
+    else:
+        loglik   = float(-res.fun)
+        n_params = n_regimes + 2 + (1 if dist == 't' else 0)
+        aic      = float(-2.0 * loglik + 2.0 * n_params)
+        bic      = float(-2.0 * loglik + n_params * math.log(T))
+
+    for lib in degeneracies:
+        _log.warning('[omega/regime] %s', lib)
+
+    return {
+        'omega':        omega_h,
+        'alpha':        alpha_h,
+        'beta':         beta_h,
+        'nu':           nu_h,
+        'persistance':  alpha_h + beta_h,
+        'n_regimes':    n_regimes,
+        'loglik':       loglik,
+        'aic':          aic,
+        'bic':          bic,
+        'converged':    bool(res.success),
+        'degenerate':   degenerate,
+        'degeneracies': degeneracies,
+    }
+
+
 # ── Wrapper principal ─────────────────────────────────────────────────────────
 
 def detecter_ruptures_brent(
@@ -468,9 +818,28 @@ def analyser_icss_pipeline(rendements, garch_final, config: dict,
 
     Modes (config['structural_breaks']['mode']) :
       'diagnostic' (défaut) — détecte, avertit, n'altère PAS l'estimation.
-      'integrate'           — ré-estime le meilleur modèle avec dummies en
-                              mean model et compare la persistance avant/après.
+      'integrate'           — ré-estime un GARCH à omega PAR RÉGIME (Hillebrand
+                              2005) et compare la persistance avant/après.
       'off'                 — aucun calcul (équivaut à enabled: false).
+
+    Mode 'integrate' — changement de méthode
+    ----------------------------------------
+    Les versions antérieures injectaient des dummies de rupture dans l'équation
+    de MOYENNE (``arch_model(..., x=dummies)``), arch 8.0.0 ne supportant pas
+    GARCHX. Ces dummies captent des sauts de niveau de rendement et laissent la
+    persistance α+β inchangée : le mode n'accomplissait pas ce qu'il annonçait.
+    L'estimation repose désormais sur ``estimer_garch_omega_par_regime`` — un
+    omega libre par régime, α et β communs.
+    Si l'estimation échoue ou dégénère, ``persistance_apres`` est ABSENTE du
+    dict (jamais une valeur fausse) et le motif est journalisé en WARNING.
+
+    Alerte Lamoureux-Lastrapes — critère
+    ------------------------------------
+    ``warning_lamoureux`` se déclenche dès UNE rupture avec une persistance
+    supérieure à ``seuil_persistance_alerte`` : une rupture de variance franche
+    gonfle la persistance au moins autant que plusieurs petites. Le paramètre
+    ``seuil_n_ruptures_alerte`` ne commande plus le déclenchement mais le
+    niveau renforcé, exposé séparément par ``warning_lamoureux_renforce``.
 
     Parameters
     ----------
@@ -482,9 +851,12 @@ def analyser_icss_pipeline(rendements, garch_final, config: dict,
 
     Returns
     -------
-    dict avec clés : n_breaks, indices, dates, mode, warning_lamoureux.
-    Si mode='integrate' et n_breaks > 0 : + persistance_avant, persistance_apres,
-    dummies_injectees.
+    dict avec clés : n_breaks, indices, dates, mode, warning_lamoureux,
+    warning_lamoureux_renforce.
+    Si mode='integrate' et n_breaks > 0 : + persistance_avant, methode,
+    n_regimes, omega_par_regime, ruptures_retenues,
+    persistance_apres_degenere, et persistance_apres UNIQUEMENT si l'estimation
+    n'a pas dégénéré — sinon degeneracies_apres en donne le motif.
     None si désactivé (enabled=False ou mode='off').
     """
     sb_cfg  = config.get('structural_breaks', {})
@@ -496,7 +868,22 @@ def analyser_icss_pipeline(rendements, garch_final, config: dict,
 
     seuil_pers  = float(sb_cfg.get('seuil_persistance_alerte', 0.97))
     seuil_n     = int(sb_cfg.get('seuil_n_ruptures_alerte', 3))
-    max_dummies = int(sb_cfg.get('max_dummies', 5))
+
+    # Sélection des ruptures pour le mode 'integrate'. `max_dummies` est un
+    # alias déprécié : il comptait des RUPTURES (soit n_regimes - 1) à l'époque
+    # où le mode injectait des dummies.
+    min_obs_regime = int(sb_cfg.get('min_obs_regime', _MIN_OBS_REGIME))
+    if sb_cfg.get('max_regimes') is not None:
+        max_regimes = int(sb_cfg['max_regimes'])
+    elif sb_cfg.get('max_dummies') is not None:
+        max_regimes = int(sb_cfg['max_dummies']) + 1
+        _log.warning(
+            "[ICSS] 'max_dummies' est deprecie (plus aucune dummy n'est injectee) "
+            "— utiliser 'max_regimes'. Valeur %d interpretee comme %d regimes.",
+            int(sb_cfg['max_dummies']), max_regimes,
+        )
+    else:
+        max_regimes = _MAX_REGIMES_DEFAUT
 
     # ── ICSS sur eps² ─────────────────────────────────────────────────────────
     try:
@@ -527,13 +914,20 @@ def analyser_icss_pipeline(rendements, garch_final, config: dict,
     except Exception as exc:
         _log.debug('[ICSS] calcul persistance Lamoureux-Lastrapes échoué (pers=NaN) : %s', exc)
 
-    warning_ll = (not math.isnan(pers) and pers > seuil_pers and n_breaks >= seuil_n)
+    # Alerte dès UNE rupture : une rupture de variance franche gonfle la
+    # persistance au moins autant que plusieurs petites. `seuil_n` ne commande
+    # plus le déclenchement mais le niveau RENFORCÉ de l'alerte.
+    pers_elevee         = (not math.isnan(pers)) and pers > seuil_pers
+    warning_ll          = bool(pers_elevee and n_breaks >= 1)
+    warning_ll_renforce = bool(pers_elevee and n_breaks >= seuil_n)
+
     if warning_ll:
         _log.warning(
-            '[ICSS] %d rupture(s) de variance détectée(s) — pers=%.4f > %.2f. '
+            '[ICSS] %d rupture(s) de variance détectée(s) — pers=%.4f > %.2f%s. '
             'La persistance est potentiellement gonflée par des changements de '
             'régime non modélisés (Lamoureux & Lastrapes 1990, JoE).',
             n_breaks, pers, seuil_pers,
+            f' — ALERTE RENFORCEE (>= {seuil_n} ruptures)' if warning_ll_renforce else '',
         )
     else:
         _log.info('[ICSS] %d rupture(s) | pers=%.4f | alerte L&L: NON',
@@ -544,52 +938,83 @@ def analyser_icss_pipeline(rendements, garch_final, config: dict,
         'indices':          breakpoints,
         'dates':            dates,
         'mode':             mode,
-        'warning_lamoureux': warning_ll,
+        'warning_lamoureux':          warning_ll,
+        'warning_lamoureux_renforce': warning_ll_renforce,
     }
 
     if mode != 'integrate' or garch_best is None or n_breaks == 0:
         return result
 
-    # ── mode='integrate' — ré-estimation avec dummies ─────────────────────────
+    # ── mode='integrate' — ré-estimation à omega par régime ───────────────────
+    # Spécification de Hillebrand (2005) : un omega propre à chaque régime,
+    # alpha et beta communs. Remplace l'injection de dummies en équation de
+    # MOYENNE, qui captait des sauts de niveau de rendement et laissait la
+    # persistance inchangée — arch 8.0.0 ne supporte pas GARCHX.
     try:
-        from arch import arch_model as _arch_model
         from tickerlab.core.rapport._stats import persistance_garch as _pers_fn
 
         bd = garch_best.to_dict() if hasattr(garch_best, 'to_dict') else dict(garch_best)
         nom_mod    = str(bd['modele'])
         pers_avant = float(_pers_fn(nom_mod, garch_final.params))
 
-        # Dummies plafonnées
-        bps_cap = breakpoints[:max_dummies]
-        dummies = _build_break_dummies(len(rend_clean), bps_cap, index=rend_clean.index)
-
-        kw = {
-            'vol':  str(bd['vol']),
-            'p':    int(bd['p']),
-            'o':    int(bd.get('o', 0)),
-            'q':    int(bd['q']),
-            'dist': str(bd['dist']),
-        }
-        power = bd.get('power', None)
-        if power is not None:
-            try:
-                pv = float(power)
-                if not math.isnan(pv):
-                    kw['power'] = pv
-            except (TypeError, ValueError) as exc:
-                _log.debug('[ICSS] power ignoré (non convertible en float) : %s', exc)
-
-        fit_avec   = _arch_model(rend_clean, x=dummies, **kw).fit(disp='off')
-        pers_apres = float(_pers_fn(nom_mod, fit_avec.params))
-
-        result['persistance_avant'] = round(pers_avant,  6)
-        result['persistance_apres'] = round(pers_apres,  6)
-        result['dummies_injectees'] = len(bps_cap)
-
-        _log.info(
-            '[ICSS integrate] pers. avant=%.4f → après=%.4f (Δ=%.4f, %d dummy(ies))',
-            pers_avant, pers_apres, pers_apres - pers_avant, len(bps_cap),
+        # Sélection par ESPACEMENT : une troncature par rang retiendrait les
+        # ruptures les plus précoces et produirait des régimes trop courts pour
+        # que les omega soient identifiables (cf. selectionner_ruptures_espacees).
+        bps_cap = selectionner_ruptures_espacees(
+            breakpoints, len(rend_clean),
+            min_obs_regime=min_obs_regime, max_regimes=max_regimes,
         )
+        result['ruptures_retenues'] = list(bps_cap)
+
+        if not bps_cap:
+            _log.warning(
+                '[ICSS integrate] aucune rupture ne laisse %d observations de '
+                'part et d\'autre (%d rupture(s) detectee(s)) — pas de regime a '
+                'estimer, persistance_apres NON renseignee.',
+                min_obs_regime, n_breaks,
+            )
+            result['methode']                    = 'omega_par_regime'
+            result['n_regimes']                  = 1
+            result['omega_par_regime']           = []
+            result['persistance_apres_degenere'] = True
+            result['degeneracies_apres']         = [
+                f'aucune rupture espacee d au moins {min_obs_regime} observations'
+            ]
+            result['persistance_avant'] = round(pers_avant, 6)
+            return result
+
+        params_g = garch_final.params
+        est = estimer_garch_omega_par_regime(
+            rend_clean, bps_cap,
+            dist=str(bd.get('dist', 'normal')),
+            nu=float(params_g['nu']) if 'nu' in list(params_g.index) else None,
+            alpha0=float(params_g.get('alpha[1]', float('nan'))),
+            beta0=float(params_g.get('beta[1]',  float('nan'))),
+        )
+
+        result['persistance_avant']          = round(pers_avant, 6)
+        result['methode']                    = 'omega_par_regime'
+        result['n_regimes']                  = int(est['n_regimes'])
+        result['omega_par_regime']           = [round(v, 8) for v in est['omega']]
+        result['persistance_apres_degenere'] = bool(est['degenerate'])
+
+        if est['degenerate'] or not math.isfinite(est['persistance']):
+            # Repli : mieux vaut PAS de persistance_apres qu'une fausse.
+            _log.warning(
+                '[ICSS integrate] estimation omega/regime degeneree ou non '
+                'exploitable — persistance_apres NON renseignee. Motifs : %s',
+                ' | '.join(est['degeneracies']) or 'persistance non finie',
+            )
+            result['degeneracies_apres'] = est['degeneracies']
+        else:
+            result['persistance_apres'] = round(float(est['persistance']), 6)
+            _log.info(
+                '[ICSS integrate] pers. avant=%.4f → après=%.4f (Δ=%.4f, '
+                '%d régime(s), omega=%s)',
+                pers_avant, est['persistance'], est['persistance'] - pers_avant,
+                est['n_regimes'],
+                '[' + ', '.join(f'{v:.4g}' for v in est['omega']) + ']',
+            )
     except Exception as exc_int:
         _log.warning('[ICSS integrate] ré-estimation échouée : %s', exc_int)
 

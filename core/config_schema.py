@@ -139,6 +139,11 @@ class StructuralBreaksConfig(BaseModel):
     methode: Optional[str] = None
     seuil_persistance_alerte: Optional[float] = Field(default=None, gt=0.0, lt=1.0)
     seuil_n_ruptures_alerte: Optional[int] = Field(default=None, ge=1)
+    # Mode 'integrate' : selection des ruptures pour l'estimation omega/regime.
+    max_regimes: Optional[int] = Field(default=None, ge=2)
+    min_obs_regime: Optional[int] = Field(default=None, ge=2)
+    # DEPRECATED — comptait des ruptures a l'epoque des dummies ; interprete
+    # comme (max_dummies + 1) regimes si max_regimes est absent.
     max_dummies: Optional[int] = Field(default=None, ge=1)
     trim: Optional[float] = None           # LEGACY
     icss: Optional[Any] = None             # LEGACY

@@ -189,7 +189,14 @@ structural_breaks:
   methode: "icss"             # "icss" = Inclán-Tiao 1994 (ruptures de variance)
   seuil_persistance_alerte: 0.97   # warning si persistance > seuil ET n_ruptures >= seuil_n
   seuil_n_ruptures_alerte: 3       # nb min de ruptures pour déclencher l'alerte
-  max_dummies: 5              # garde-fou : si mode=integrate, plafonne le nb de dummies injectées
+  # ── Mode integrate : sélection des ruptures (estimation omega par régime) ──
+  max_regimes: 6              # plafond d'identifiabilité : chaque régime consomme
+                              #   un paramètre omega libre (=> 5 ruptures au plus)
+  min_obs_regime: 50          # espacement minimal entre ruptures retenues, en
+                              #   observations ; aligné sur le seuil en deçà duquel
+                              #   un régime est déclaré dégénéré
+  # max_dummies: 5            # DEPRECATED — plus aucune dummy n'est injectée.
+                              #   Encore lu comme alias (max_dummies + 1 régimes).
   # ── Paramètres legacy (rapport/_sections.py via detecter_ruptures_brent) ──
   trim: 0.15                  # fraction exclue en début/fin pour Chow et CUSUM
   icss:
