@@ -115,15 +115,6 @@ def _build_row(methode, alpha, N_viol, T_eff, lr_uc, p_uc, lr_ind, p_ind):
 
 # â”€â”€ Backtest principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-def _rnd4(x):
-    """Arrondi defensif a 4 decimales, transparent aux NaN/None."""
-    try:
-        xf = float(x)
-    except (TypeError, ValueError):
-        return x
-    return round(xf, 4) if math.isfinite(xf) else xf
-
-
 def _detail_backtest_oos(serie_oos, mu_bt, nu_bt, dist, vol_oos_vals, garch_bt,
                          mu_tr, sigma_tr, T_eff_dyn, config_frtb=None):
     """Bloc de detail enrichi pour l'API v1 : les 6 tests de backtest sur la
@@ -201,8 +192,8 @@ def _detail_backtest_oos(serie_oos, mu_bt, nu_bt, dist, vol_oos_vals, garch_bt,
     es975_bench  = np.full(T_eff_dyn, mu_tr + tvar_normale(0.0, 1.0, alpha_e) * sigma_tr)
     fz_g = fissler_ziegel_loss(r, var975,       es975,       alpha=alpha_e)
     fz_b = fissler_ziegel_loss(r, var975_bench, es975_bench, alpha=alpha_e)
-    fz_g_ser = fz_g['score_series'].values
-    fz_b_ser = fz_b['score_series'].values
+    fz_g_ser = fz_g['score_series']
+    fz_b_ser = fz_b['score_series']
     n_dm = min(len(fz_g_ser), len(fz_b_ser))
     dm_stat = dm_pval = float('nan')
     if n_dm >= 10:
@@ -218,8 +209,8 @@ def _detail_backtest_oos(serie_oos, mu_bt, nu_bt, dist, vol_oos_vals, garch_bt,
     return {
         'alpha_var': alpha_v, 'alpha_es': alpha_e, 'T_eff_dyn': int(T_eff_dyn),
         'n_exceptions_99': N,
-        'kupiec':         {'stat': _rnd4(lr_uc),  'pvalue': _rnd4(p_uc)},
-        'christoffersen': {'stat': _rnd4(lr_ind), 'pvalue': _rnd4(p_ind)},
+        'kupiec':         {'stat': lr_uc,  'pvalue': p_uc},
+        'christoffersen': {'stat': lr_ind, 'pvalue': p_ind},
         'frtb': frtb,                          # dict {dq, acerbi_szekely, lopez, fissler_ziegel, traffic_light}
         'berkowitz': berk,                     # dict {LR_stat, pvalue, ...}
         'fissler_ziegel_dm': {
@@ -227,8 +218,8 @@ def _detail_backtest_oos(serie_oos, mu_bt, nu_bt, dist, vol_oos_vals, garch_bt,
             'alpha_score':     alpha_e,        # VaR et ES alignes pour FZ0
             'score_garch':     fz_g['score_moyen'],
             'score_benchmark': fz_b['score_moyen'],
-            'dm_stat':         _rnd4(dm_stat),
-            'dm_pvalue':       _rnd4(dm_pval),
+            'dm_stat':         dm_stat,
+            'dm_pvalue':       dm_pval,
         },
     }
 
@@ -447,8 +438,8 @@ def engle_manganelli_dq(
         DQ, pv, df = float('nan'), float('nan'), lags + 2
 
     return {
-        'DQ_stat': round(DQ, 4) if math.isfinite(DQ) else DQ,
-        'p_value': round(pv, 4) if math.isfinite(pv) else pv,
+        'DQ_stat': DQ,
+        'p_value': pv,
         'df':      lags + 2,
         'verdict': 'OK' if (math.isfinite(pv) and pv > 0.05) else 'NON',
     }
@@ -638,16 +629,19 @@ def fissler_ziegel_loss(
     ----------
     returns : np.ndarray
         Rendements out-of-sample (négatifs = pertes).
-    var : np.ndarray
-        VaR_{α,t} (négatif, convention pertes).
-    es : np.ndarray
-        ES_{α,t} (négatif, convention pertes).
+    var : np.ndarray or float
+        VaR_{α,t} (négatif, convention pertes). Un scalaire est traité comme
+        une borne constante, SANS dilatation à la taille de `returns`.
+    es : np.ndarray or float
+        ES_{α,t} (négatif, convention pertes). Scalaire accepté, idem `var`.
     alpha : float
         Niveau de confiance (défaut 0.99).
 
     Returns
     -------
-    dict avec 'score_total', 'score_moyen', 'score_series'.
+    dict avec 'score_total', 'score_moyen' (float64 pleine precision) et
+    'score_series' (np.ndarray). L'arrondi et l'emballage pandas relevent de
+    la couche presentation, pas du calcul.
 
     References
     ----------
@@ -657,21 +651,40 @@ def fissler_ziegel_loss(
         Perspectives for banking regulation. Annals of Statistics,
         45(4), 1597–1638.
     """
-    r    = np.asarray(returns, dtype=float)
-    v    = np.asarray(var,     dtype=float)
-    e    = np.asarray(es,      dtype=float)
-    mask = np.isfinite(r) & np.isfinite(v) & np.isfinite(e) & (e < -1e-12)
-    r, v, e = r[mask], v[mask], e[mask]
+    r = np.asarray(returns, dtype=float)
+    v = np.asarray(var,     dtype=float)
+    e = np.asarray(es,      dtype=float)
+    p = 1.0 - alpha
+
+    # Filtrage des observations inexploitables. Le resultat est identique a un
+    # masque systematique ; seul le travail evite change :
+    #   - bornes scalaires : le terme correspondant est une CONSTANTE, on ne la
+    #     dilate pas a la taille de `returns` (log(-e) devient un seul log) ;
+    #   - entrees deja propres : `.all()` ne fait qu'une passe de lecture, la
+    #     ou l'indexation booleenne recopierait chaque vecteur.
+    if v.ndim == 0 and e.ndim == 0:
+        # Une borne scalaire invalide disqualifie TOUTES les observations.
+        if not (np.isfinite(v) and np.isfinite(e) and e < -1e-12):
+            return {'score_total': 0.0, 'score_moyen': 0.0,
+                    'score_series': np.empty(0, dtype=float)}
+        fini = np.isfinite(r)
+        if not fini.all():
+            r = r[fini]
+    else:
+        mask = np.isfinite(r) & np.isfinite(v) & np.isfinite(e) & (e < -1e-12)
+        if not mask.all():
+            r = r[mask]
+            v = v[mask] if v.ndim else v
+            e = e[mask] if e.ndim else e
 
     hits  = (r < v).astype(float)
-    p     = 1.0 - alpha
     score_t = ((p - hits) * v + hits * r) / e + p * np.log(-e)
     total   = float(score_t.sum())
 
     return {
-        'score_total':  round(total, 4),
-        'score_moyen':  round(total / max(len(r), 1), 6),
-        'score_series': pd.Series(score_t, name='FZ_loss'),
+        'score_total':  total,
+        'score_moyen':  total / max(len(r), 1),
+        'score_series': score_t,
     }
 
 

@@ -361,7 +361,8 @@ def berkowitz_test(
 
     Returns
     -------
-    dict avec 'LR_stat', 'pvalue', 'mu_hat', 'rho_hat', 'sigma2_hat'.
+    dict avec 'LR_stat', 'pvalue', 'mu_hat', 'rho_hat', 'sigma2_hat', en
+    float64 pleine precision — l'arrondi releve de la couche presentation.
 
     References
     ----------
@@ -414,7 +415,7 @@ def berkowitz_test(
     sig2_h  = float(np.mean(resid ** 2))
     if sig2_h <= 0.0:
         return {'LR_stat': float('nan'), 'pvalue': float('nan'),
-                'mu_hat': round(mu_hat, 4), 'rho_hat': round(rho_hat, 4),
+                'mu_hat': mu_hat, 'rho_hat': rho_hat,
                 'sigma2_hat': float('nan')}
 
     # Étape 4 : statistique LR ~ χ²(3)
@@ -426,11 +427,11 @@ def berkowitz_test(
     pv  = float(1.0 - _s_chi2.cdf(LR, df=3)) if math.isfinite(LR) else float('nan')
 
     return {
-        'LR_stat':    round(LR,      4) if math.isfinite(LR)  else LR,
-        'pvalue':     round(pv,      4) if math.isfinite(pv)  else pv,
-        'mu_hat':     round(mu_hat,  4),
-        'rho_hat':    round(rho_hat, 4),
-        'sigma2_hat': round(sig2_h,  4),
+        'LR_stat':    LR,
+        'pvalue':     pv,
+        'mu_hat':     mu_hat,
+        'rho_hat':    rho_hat,
+        'sigma2_hat': sig2_h,
     }
 
 

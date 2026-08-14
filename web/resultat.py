@@ -75,6 +75,17 @@ def _rnd(x, n=4):
     return round(float(x), n) if _fini(x) else None
 
 
+def _pct(x) -> Optional[str]:
+    """Formate un niveau de confiance (0.975) en pourcentage lisible ('97.5 %').
+
+    None si le niveau est absent ou non fini : on n'invente jamais un niveau,
+    la mention est simplement omise de la convention affichee.
+    """
+    if not _fini(x):
+        return None
+    return f'{float(x) * 100:g} %'
+
+
 # ── Construction du detail 6 tests ────────────────────────────────────────────
 
 def _detail_six_tests(bd: dict) -> dict:
@@ -87,6 +98,21 @@ def _detail_six_tests(bd: dict) -> dict:
     fzdm = bd.get('fissler_ziegel_dm') or {}
     kup  = bd.get('kupiec') or {}
     chr_ = bd.get('christoffersen') or {}
+
+    # FZ0 n'est strictement consistant que pour (VaR_alpha, ES_alpha) au MEME
+    # niveau : le score est donc evalue a `alpha_score` (97.5 %), distinct du
+    # niveau de reporting des tests de couverture (`alpha_var`, 99 %). Les deux
+    # niveaux sont LUS depuis le detail, jamais codes en dur ici.
+    fz_niveau  = _pct(fzdm.get('alpha_score'))
+    var_niveau = _pct(bd.get('alpha_var'))
+    fz_convention = ('Fissler-Ziegel (2016) FZ0 : SCORE consistant. Verdict = '
+                     'Diebold-Mariano HAC vs benchmark nomme ; accepte si GARCH '
+                     'non signif. pire.')
+    if fz_niveau:
+        fz_convention += (f' Score evalue a {fz_niveau} (VaR et ES au MEME niveau : '
+                          'condition de consistance conjointe de FZ0)')
+        fz_convention += (f', a distinguer du {var_niveau} de Kupiec/Christoffersen/DQ.'
+                          if var_niveau else '.')
 
     detail = {
         'kupiec': {
@@ -116,7 +142,7 @@ def _detail_six_tests(bd: dict) -> dict:
             'benchmark_score': _rnd(fzdm.get('score_benchmark')),
             'stat': _rnd(fzdm.get('dm_stat')), 'pvalue': _rnd(fzdm.get('dm_pvalue')),
             'verdict': _verdict_fz(fzdm),
-            'convention': 'Fissler-Ziegel (2016) FZ0 : SCORE consistant. Verdict = Diebold-Mariano HAC vs benchmark nomme ; accepte si GARCH non signif. pire.',
+            'convention': fz_convention,
         },
         'berkowitz_pit': {
             'stat': _rnd(berk.get('LR_stat')), 'pvalue': _rnd(berk.get('pvalue')),
